@@ -6,6 +6,7 @@ import numpy as np
 from pathlib import Path
 import logging
 from concurrent.futures import ProcessPoolExecutor
+import time
 
 def Start():
 
@@ -14,6 +15,15 @@ def Start():
     original_img = None
     image_files = []
     dummy_image = Image.new("RGB", (THUMBNAIL_SIZE, THUMBNAIL_SIZE), "white")
+
+    def TimeIt(func):
+        def wrapper(*args, **kwargs):
+            start_time = time.time()
+            result = func(*args, **kwargs)
+            end_time = time.time()
+            logging.info(f"{func.__name__} executed in {end_time - start_time} seconds")
+            return result
+        return wrapper
 
     def OnSliderCutoff():
         # img = picture_Original.image
@@ -38,9 +48,18 @@ def Start():
 
     def UpdateListBox(image_files):
         listBox_Files.clear()
-        for file in image_files:
-            listBox_Files.append(file)
+        add_items_in_batches(image_files)
 
+    def add_items_in_batches(image_files, index=0, batch_size=100):
+        next_index = index + batch_size
+        for file in image_files[index:next_index]:
+            listBox_Files.append(file)
+        if next_index < len(image_files):
+            # Schedule the next batch
+            listBox_Files.after(100, add_items_in_batches, args=[image_files, next_index, batch_size])
+
+
+    @TimeIt
     def LoadImages(folder_path):
         image_patterns = ['*.jpg', '*.jpeg', '*.png',
                           '*.gif', '*.bmp', '*.tif', '*.tiff', '*.webp']
