@@ -39,7 +39,7 @@ def Start():
 
     def OpenFolder():
         selectedFolder = filedialog.askdirectory(
-            title="Choose Image Folder", mustexist=True, initialdir=str(Path.home()/".AAA"))
+            title="Choose Image Folder", mustexist=True, initialdir=str(Path.home()))
         if (selectedFolder):
             logging.info(f"Selected folder: {selectedFolder}")
             image_files = LoadImages(selectedFolder)
