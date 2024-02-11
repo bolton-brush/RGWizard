@@ -9,29 +9,28 @@ from concurrent.futures import ProcessPoolExecutor
 import time
 
 
+logging.basicConfig(level=logging.INFO)
+THUMBNAIL_SIZE = 300
+dummy_image = Image.new("RGB", (THUMBNAIL_SIZE, THUMBNAIL_SIZE), "white")
+original_img = None
+
 def Start():
-
-    logging.basicConfig(level=logging.INFO)
-    THUMBNAIL_SIZE = 300
-    # original_img = None
-    # image_files = []
-    dummy_image = Image.new("RGB", (THUMBNAIL_SIZE, THUMBNAIL_SIZE), "white")
-
     def TimeIt(func):
         def wrapper(*args, **kwargs):
             start_time = time.time()
             result = func(*args, **kwargs)
             end_time = time.time()
-            logging.info(f"{func.__name__} executed in {
-                         end_time - start_time} seconds")
+            logging.info(f"{func.__name__} executed in {end_time - start_time} seconds")
             return result
         return wrapper
 
     def OnSlider_AC_Cutoff():
-        global original_img
         ac_prev = ComputeAC(original_img, slider_AC_Cutoff.value)
         picture_AC.image = Image.fromarray(ac_prev)
         picture_Hist.image = PlotHistogram(picture_AC.image)
+
+    def On_MouseEnter_Preview(event_data):
+        PlotHistogram(event_data.widget.image)
 
     def OnListBoxChanged(file):
         if (listBox_Files.items):
@@ -79,6 +78,9 @@ def Start():
             original_prev = Image.fromarray(original_img)
 
         picture_Original.image = original_prev
+        if(not slider_AC_Cutoff.enabled):
+            slider_AC_Cutoff.enable()
+            slider_AC_Cutoff.value = 20
 
         ac_prev = ComputeAC(original_img, cutoff=slider_AC_Cutoff.value)
         ac_prev = Image.fromarray(ac_prev)
@@ -126,9 +128,6 @@ def Start():
 
         picture_Hist.image = histogram_image
 
-    def On_MouseEnter_Preview(event_data):
-        PlotHistogram(event_data.widget.image)
-
     app = App(title="XRView", layout="auto", width=1600, height=900)
     app.tk.config(padx=5, pady=5)
 
@@ -165,9 +164,7 @@ def Start():
     titleBox_AC = TitleBox(box_AC, "Auto Contrast", align="top")
     titleBox_AC.tk.config(padx=5, pady=5)
     picture_AC = Picture(titleBox_AC, align="top", image=dummy_image)
-    slider_AC_Cutoff = Slider(titleBox_AC, command=OnSlider_AC_Cutoff,
-                              start=0, end=49, align="bottom", width="fill")
-    slider_AC_Cutoff.value = 2
+    slider_AC_Cutoff = Slider(titleBox_AC, enabled=False, command=OnSlider_AC_Cutoff, start=0, end=49, align="bottom", width="fill")
     picture_AC.when_mouse_enters = On_MouseEnter_Preview
 
     # Box(titleBox_Previews, align="left", width="fill")
