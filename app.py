@@ -28,14 +28,30 @@ def Start():
 
     def On_Slider_AC_Cutoff():
         ac_prev = ComputeAC(original_img, slider_AC_Cutoff.value)
-        picture_AC.image = Image.fromarray(ac_prev)
+        if(combo_Colormap.value != 'gray'):
+            ac_prev = plt.get_cmap(combo_Colormap.value)(ac_prev)[:, :, :3]
+        picture_AC.image = Image.fromarray(util.img_as_ubyte(ac_prev))
         picture_Hist.image = PlotHistogram(picture_AC.image)
 
     def On_MouseEnter_Preview(event_data):
         PlotHistogram(event_data.widget.image)
     
-    def On_DoubleClick_Preview(widget):
-        print(widget)
+    def On_DoubleClick_Preview(event):
+        if (listBox_Files.items):
+            img = io.imread(listBox_Files.value, as_gray=True)
+            img = util.img_as_float64(img)
+            name = event.widget.name
+            
+            if(name == "ac"):
+                img = ComputeAC(img, cutoff=slider_AC_Cutoff.value)
+            elif(name == "he"):
+                img = ComputeHE(img)
+            elif(name == "ahe"):
+                img = ComputeAHE(img)
+
+            plt.imshow(img, cmap=combo_Colormap.value, vmin=0)
+            plt.show()
+
 
     def On_ListBoxChanged(file):
         if (listBox_Files.items):
@@ -75,34 +91,40 @@ def Start():
     def GeneratePreviews(image_File):
         global original_img
         img = io.imread(image_File, as_gray=True)
-        img = transform.rescale(img, 0.25, anti_aliasing=True)
-        original_img = util.img_as_float64(exposure.rescale_intensity(img))
-        if(combo_Colormap.value != 'gray'):
-            original_img = plt.get_cmap(combo_Colormap.value)(original_img)[:, :, :3]
-        original_prev = util.img_as_ubyte(original_img)
-
-        h, w = original_prev.shape[:2]
+        original_img = util.img_as_float64(transform.rescale(img, 0.5, anti_aliasing=True))
+        # original_img = util.img_as_float64(exposure.rescale_intensity(img))
+        h, w = original_img.shape[:2]
         prev_height = int(THUMBNAIL_SIZE / (w / h))
-
+        
+        if(combo_Colormap.value != 'gray'):
+            original_prev = plt.get_cmap(combo_Colormap.value)(original_img)[:, :, :3]
+        else:
+            original_prev = original_img.copy()
         picture_Original.height = prev_height
-        original_prev = Image.fromarray(original_prev)
+        original_prev = Image.fromarray(util.img_as_ubyte(original_prev))
         picture_Original.image = original_prev
         if(not slider_AC_Cutoff.enabled):
             slider_AC_Cutoff.enable()
             slider_AC_Cutoff.value = 2
 
         ac_prev = ComputeAC(original_img, cutoff=slider_AC_Cutoff.value)
-        ac_prev = Image.fromarray(ac_prev)
+        if(combo_Colormap.value != 'gray'):
+            ac_prev = plt.get_cmap(combo_Colormap.value)(ac_prev)[:, :, :3]
+        ac_prev = Image.fromarray(util.img_as_ubyte(ac_prev))
         picture_AC.height = prev_height
         picture_AC.image = ac_prev
 
         he_prev = ComputeHE(original_img)
-        he_prev = Image.fromarray(he_prev)
+        if(combo_Colormap.value != 'gray'):
+            he_prev = plt.get_cmap(combo_Colormap.value)(he_prev)[:, :, :3]
+        he_prev = Image.fromarray(util.img_as_ubyte(he_prev))
         picture_HE.height = prev_height
         picture_HE.image = he_prev
 
         ahe_prev = ComputeAHE(original_img)
-        ahe_prev = Image.fromarray(ahe_prev)
+        if(combo_Colormap.value != 'gray'):
+            ahe_prev = plt.get_cmap(combo_Colormap.value)(ahe_prev)[:, :, :3]
+        ahe_prev = Image.fromarray(util.img_as_ubyte(ahe_prev))
         picture_AHE.height = prev_height
         picture_AHE.image = ahe_prev
 
@@ -111,16 +133,16 @@ def Start():
     def ComputeAC(image, cutoff=2):
         p_lower, p_upper = np.percentile(image, (0+cutoff, 100-cutoff))
         img_ac = exposure.rescale_intensity(
-            image, in_range=(p_lower, p_upper), out_range=np.uint8)
+            image, in_range=(p_lower, p_upper))
         return img_ac
 
     def ComputeHE(image):
         img_eq = exposure.equalize_hist(image)
-        return util.img_as_ubyte(img_eq)
+        return img_eq
 
     def ComputeAHE(image):
         img_ahe = exposure.equalize_adapthist(image)
-        return util.img_as_ubyte(img_ahe)
+        return img_ahe
     
     def PlotHistogram(image, image_size=(THUMBNAIL_SIZE, THUMBNAIL_SIZE), background_color='white'):
         histogram = image.histogram()
@@ -197,12 +219,13 @@ def Start():
     box_Colormap = Box(titleBox_Previews, width='fill')
     box_Colormap.tk.config(padx=5, pady=5)
     text_Colormap = Text(box_Colormap, "Colormap: ", align="left")
-    combo_Colormap = Combo(box_Colormap, ['gray', 'viridis'], align='left', command=On_ComboColormapChanged)
+    combo_Colormap = Combo(box_Colormap, ['gray', 'viridis', 'plasma', 'inferno', 'magma', 'cividis'], align='left', command=On_ComboColormapChanged)
 
     box_original = Box(titleBox_Previews, align="left", height="fill")
     titleBox_Original = TitleBox(box_original, "Original", align="top")
     titleBox_Original.tk.config(padx=5, pady=5)
     picture_Original = Picture(titleBox_Original, align="left", image=dummy_image)
+    picture_Original.name = "original"
     picture_Original.when_mouse_enters = On_MouseEnter_Preview
     picture_Original.when_double_clicked = On_DoubleClick_Preview
 
@@ -212,6 +235,7 @@ def Start():
     titleBox_AC = TitleBox(box_AC, "Auto Contrast", align="top")
     titleBox_AC.tk.config(padx=5, pady=5)
     picture_AC = Picture(titleBox_AC, align="top", image=dummy_image)
+    picture_AC.name = "ac"
     slider_AC_Cutoff = Slider(titleBox_AC, enabled=False, command=On_Slider_AC_Cutoff, start=0, end=49, align="bottom", width="fill")
     picture_AC.when_mouse_enters = On_MouseEnter_Preview
     picture_AC.when_double_clicked = On_DoubleClick_Preview
@@ -222,6 +246,7 @@ def Start():
     titleBox_HE = TitleBox(box_HE, "Histogram Equalization", align="top")
     titleBox_HE.tk.config(padx=5, pady=5)
     picture_HE = Picture(titleBox_HE, align="left", image=dummy_image)
+    picture_HE.name = "he"
     picture_HE.when_mouse_enters = On_MouseEnter_Preview
     picture_HE.when_double_clicked = On_DoubleClick_Preview
 
@@ -231,6 +256,7 @@ def Start():
     titleBox_AHE = TitleBox(box_AHE, "Adaptive Histogram Equalization", align="top")
     titleBox_AHE.tk.config(padx=5, pady=5)
     picture_AHE = Picture(titleBox_AHE, align="left", image=dummy_image)
+    picture_AHE.name = "ahe"
     picture_AHE.when_mouse_enters = On_MouseEnter_Preview
     picture_AHE.when_double_clicked = On_DoubleClick_Preview
 
