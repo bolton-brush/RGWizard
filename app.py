@@ -90,12 +90,11 @@ def Start():
 
     def GeneratePreviews(image_File):
         global original_img
-        img = io.imread(image_File, as_gray=True)
-        original_img = util.img_as_float64(transform.rescale(img, 0.5, anti_aliasing=True))
-        # original_img = util.img_as_float64(exposure.rescale_intensity(img))
-        h, w = original_img.shape[:2]
+        img = util.img_as_float64(io.imread(image_File, as_gray=True))
+        h, w = img.shape[:2]
         prev_height = int(THUMBNAIL_SIZE / (w / h))
-        
+        original_img = transform.resize(img, (prev_height, THUMBNAIL_SIZE), anti_aliasing=True)
+
         if(combo_Colormap.value != 'gray'):
             original_prev = plt.get_cmap(combo_Colormap.value)(original_img)[:, :, :3]
         else:
