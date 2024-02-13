@@ -33,6 +33,9 @@ def Start():
 
     def On_MouseEnter_Preview(event_data):
         PlotHistogram(event_data.widget.image)
+    
+    def On_DoubleClick_Preview(widget):
+        print(widget)
 
     def On_ListBoxChanged(file):
         if (listBox_Files.items):
@@ -201,6 +204,7 @@ def Start():
     titleBox_Original.tk.config(padx=5, pady=5)
     picture_Original = Picture(titleBox_Original, align="left", image=dummy_image)
     picture_Original.when_mouse_enters = On_MouseEnter_Preview
+    picture_Original.when_double_clicked = On_DoubleClick_Preview
 
     # Box(titleBox_Previews, align="left", width="fill")
 
@@ -210,6 +214,7 @@ def Start():
     picture_AC = Picture(titleBox_AC, align="top", image=dummy_image)
     slider_AC_Cutoff = Slider(titleBox_AC, enabled=False, command=On_Slider_AC_Cutoff, start=0, end=49, align="bottom", width="fill")
     picture_AC.when_mouse_enters = On_MouseEnter_Preview
+    picture_AC.when_double_clicked = On_DoubleClick_Preview
 
     # Box(titleBox_Previews, align="left", width="fill")
 
@@ -218,6 +223,7 @@ def Start():
     titleBox_HE.tk.config(padx=5, pady=5)
     picture_HE = Picture(titleBox_HE, align="left", image=dummy_image)
     picture_HE.when_mouse_enters = On_MouseEnter_Preview
+    picture_HE.when_double_clicked = On_DoubleClick_Preview
 
     # Box(titleBox_Previews, align="left", width="fill")
 
@@ -226,6 +232,7 @@ def Start():
     titleBox_AHE.tk.config(padx=5, pady=5)
     picture_AHE = Picture(titleBox_AHE, align="left", image=dummy_image)
     picture_AHE.when_mouse_enters = On_MouseEnter_Preview
+    picture_AHE.when_double_clicked = On_DoubleClick_Preview
 
     # Box(titleBox_Previews, align="left", width="fill")
 
