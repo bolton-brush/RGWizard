@@ -7,8 +7,11 @@ from matplotlib import pyplot as plt
 from pathlib import Path
 from io import BytesIO
 import logging
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
+import threading
 import time
+from functools import partial
+import random as rnd
 
 
 logging.basicConfig(level=logging.INFO)
@@ -16,21 +19,64 @@ THUMBNAIL_SIZE = 300
 dummy_image = Image.new("L", (THUMBNAIL_SIZE, THUMBNAIL_SIZE), "white")
 original_img = None
 
-def Start():
-    def TimeIt(func):
-        def wrapper(*args, **kwargs):
-            start_time = time.time()
-            result = func(*args, **kwargs)
-            end_time = time.time()
-            logging.info(f"{func.__name__} executed in {end_time - start_time} seconds")
-            return result
-        return wrapper
+def TimeIt(func):
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        result = func(*args, **kwargs)
+        end_time = time.time()
+        logging.info(f"{func.__name__} executed in {end_time - start_time} seconds")
+        return result
+    return wrapper
 
+def BatchCompute(file, selectedFolder, compute, cmap, cutoff):
+    img = io.imread(file)
+    original_dtype = img.dtype
+    path = Path(file)
+    selectedFolder = Path(selectedFolder)
+
+    if(compute == "Auto Contrast"):
+        p_lower, p_upper = np.percentile(img, (0+cutoff, 100-cutoff))
+        img_ac = exposure.rescale_intensity(img, in_range=(p_lower, p_upper))
+        if(cmap != 'gray'):
+            img_ac = plt.get_cmap(cmap)(img_ac)[:, :, :3]
+        new_path = selectedFolder / "AutoContrast" / path.name
+        new_path.parent.mkdir(parents=True, exist_ok=True)
+        if(original_dtype == np.uint8):
+            img_ac = util.img_as_ubyte(img_ac)
+        elif(original_dtype == np.uint16):
+            img_ac = util.img_as_uint(img_ac)
+        io.imsave(new_path, img_ac)
+
+    elif(compute == "Histogram Equalization (HE)"):
+        img_he = exposure.equalize_hist(img)
+        if(cmap != 'gray'):
+            img_he = plt.get_cmap(cmap)(img_he)[:, :, :3]
+        new_path = selectedFolder / "HistogramEqualization" / path.name
+        new_path.parent.mkdir(parents=True, exist_ok=True)
+        if(original_dtype == np.uint8):
+            img_he = util.img_as_ubyte(img_he)
+        elif(original_dtype == np.uint16):
+            img_he = util.img_as_uint(img_he)
+        io.imsave(new_path, img_he)
+    
+    elif(compute == "Adaptive HE"):
+        img_ahe = exposure.equalize_adapthist(img)
+        if(cmap != 'gray'):
+            img_ahe = plt.get_cmap(cmap)(img_ahe)[:, :, :3]
+        new_path = selectedFolder / "AdaptiveHistogramEqualization" / path.name
+        new_path.parent.mkdir(parents=True, exist_ok=True)
+        if(original_dtype == np.uint8):
+            img_ahe = util.img_as_ubyte(img_ahe)
+        elif(original_dtype == np.uint16):
+            img_ahe = util.img_as_uint(img_ahe)
+        io.imsave(new_path, img_ahe)
+    
+    return str(new_path)
+
+def Start():
     def On_Slider_AC_Cutoff():
-        ac_prev = ComputeAC(original_img, slider_AC_Cutoff.value)
-        if(combo_Colormap.value != 'gray'):
-            ac_prev = plt.get_cmap(combo_Colormap.value)(ac_prev)[:, :, :3]
-        picture_AC.image = Image.fromarray(util.img_as_ubyte(ac_prev))
+        ac_prev = ComputeAC(original_img, combo_Colormap.value, slider_AC_Cutoff.value)
+        picture_AC.image = ac_prev
         picture_Hist.image = PlotHistogram(picture_AC.image)
 
     def On_MouseEnter_Preview(event_data):
@@ -41,33 +87,62 @@ def Start():
             img = io.imread(listBox_Files.value, as_gray=True)
             img = util.img_as_float64(img)
             name = event.widget.name
-            
             if(name == "ac"):
-                img = ComputeAC(img, cutoff=slider_AC_Cutoff.value)
+                cutoff = slider_AC_Cutoff.value
+                p_lower, p_upper = np.percentile(img, (0+cutoff, 100-cutoff))
+                img = exposure.rescale_intensity(img, in_range=(p_lower, p_upper))
             elif(name == "he"):
-                img = ComputeHE(img)
+                img = exposure.equalize_hist(img)
             elif(name == "ahe"):
-                img = ComputeAHE(img)
-
+                img = exposure.equalize_adapthist(img)
             plt.imshow(img, cmap=combo_Colormap.value, vmin=0)
             plt.show()
-
 
     def On_ListBoxChanged(file):
         if (listBox_Files.items):
             GeneratePreviews(file)
 
     def On_ComboColormapChanged():
-        GeneratePreviews(listBox_Files.value)
+        if (listBox_Files.items and listBox_Files.value):
+            GeneratePreviews(listBox_Files.value)
 
-    def OpenFolder():
+    def On_OpenFolder():
         selectedFolder = filedialog.askdirectory(title="Choose Image Folder", mustexist=True, initialdir=str(Path.home()))
         if (selectedFolder):
             logging.info(f"Selected folder: {selectedFolder}")
             image_files = LoadImages(selectedFolder)
             UpdateListBox(image_files)
+            UpdateProgBar(0)
         else:
             logging.info(f"Folder selection canceled")
+    
+    def On_BatchCompute():
+        if(listBox_Files.items):
+            selectedFolder = filedialog.askdirectory(title="Choose Output Folder", mustexist=True, initialdir=str(Path.home()))
+            if (selectedFolder):
+                files = listBox_Files.items
+                tot = len(listBox_Files.items)
+                compute = combo_Compute.value
+                cmap = combo_Colormap.value
+                cutoff = slider_AC_Cutoff.value
+                background_thread = threading.Thread(target=Run_BatchCompute, args=(selectedFolder, files, tot, compute, cmap, cutoff))
+                background_thread.start()
+        
+    def Run_BatchCompute(selectedFolder, files, tot, compute, cmap, cutoff):
+        partial_BatchCompute = partial(BatchCompute, selectedFolder=selectedFolder, compute=compute, cmap=cmap, cutoff=cutoff)
+        with ProcessPoolExecutor() as pex:
+            futures = [pex.submit(partial_BatchCompute, file) for file in files]
+            for i, f in enumerate(as_completed(futures), 1):
+                res = f.result()
+                app.after(0, Update_BatchCompute, [res, i, tot])
+    
+    def Update_BatchCompute(res, i, tot):
+        msg = f"{i}/{tot} computed"
+        text_Status.value = msg
+        logging.info(f"{i}/{tot} - {res}")
+        percent = int((i/tot)*100)
+        UpdateProgBar(percent)
+
 
     @TimeIt
     def LoadImages(folder_path):
@@ -88,8 +163,12 @@ def Start():
         text_Status.value = msg
         logging.info(msg)
 
+    def UpdateProgBar(percent):
+        prog_bar["value"] = percent
+
     def GeneratePreviews(image_File):
         global original_img
+        global prev_height
         img = util.img_as_float64(io.imread(image_File, as_gray=True))
         h, w = img.shape[:2]
         prev_height = int(THUMBNAIL_SIZE / (w / h))
@@ -102,46 +181,40 @@ def Start():
         picture_Original.height = prev_height
         original_prev = Image.fromarray(util.img_as_ubyte(original_prev))
         picture_Original.image = original_prev
+
         if(not slider_AC_Cutoff.enabled):
             slider_AC_Cutoff.enable()
             slider_AC_Cutoff.value = 2
 
-        ac_prev = ComputeAC(original_img, cutoff=slider_AC_Cutoff.value)
-        if(combo_Colormap.value != 'gray'):
-            ac_prev = plt.get_cmap(combo_Colormap.value)(ac_prev)[:, :, :3]
-        ac_prev = Image.fromarray(util.img_as_ubyte(ac_prev))
-        picture_AC.height = prev_height
-        picture_AC.image = ac_prev
+        app.after(1, ComputeAC, [original_img, combo_Colormap.value, slider_AC_Cutoff.value])
+        app.after(2, ComputeHE, [original_img, combo_Colormap.value])
+        app.after(3, ComputeAHE, [original_img, combo_Colormap.value])
+        app.after(4, PlotHistogram, [picture_Original.image])
 
-        he_prev = ComputeHE(original_img)
-        if(combo_Colormap.value != 'gray'):
-            he_prev = plt.get_cmap(combo_Colormap.value)(he_prev)[:, :, :3]
-        he_prev = Image.fromarray(util.img_as_ubyte(he_prev))
-        picture_HE.height = prev_height
-        picture_HE.image = he_prev
-
-        ahe_prev = ComputeAHE(original_img)
-        if(combo_Colormap.value != 'gray'):
-            ahe_prev = plt.get_cmap(combo_Colormap.value)(ahe_prev)[:, :, :3]
-        ahe_prev = Image.fromarray(util.img_as_ubyte(ahe_prev))
-        picture_AHE.height = prev_height
-        picture_AHE.image = ahe_prev
-
-        PlotHistogram(picture_Original.image)
-
-    def ComputeAC(image, cutoff=2):
+    def ComputeAC(image, cmap, cutoff=2):
         p_lower, p_upper = np.percentile(image, (0+cutoff, 100-cutoff))
-        img_ac = exposure.rescale_intensity(
-            image, in_range=(p_lower, p_upper))
-        return img_ac
+        img_ac = exposure.rescale_intensity(image, in_range=(p_lower, p_upper))
+        if(cmap != 'gray'):
+            img_ac = plt.get_cmap(cmap)(img_ac)[:, :, :3]
+        img_ac = Image.fromarray(util.img_as_ubyte(img_ac))
+        picture_AC.height = prev_height
+        picture_AC.image = img_ac
 
-    def ComputeHE(image):
-        img_eq = exposure.equalize_hist(image)
-        return img_eq
+    def ComputeHE(image, cmap):
+        img_he = exposure.equalize_hist(image)
+        if(cmap != 'gray'):
+            img_he = plt.get_cmap(cmap)(img_he)[:, :, :3]
+        img_he = Image.fromarray(util.img_as_ubyte(img_he))
+        picture_HE.height = prev_height
+        picture_HE.image = img_he
 
-    def ComputeAHE(image):
+    def ComputeAHE(image, cmap):
         img_ahe = exposure.equalize_adapthist(image)
-        return img_ahe
+        if(cmap != 'gray'):
+            img_ahe = plt.get_cmap(cmap)(img_ahe)[:, :, :3]
+        img_ahe = Image.fromarray(util.img_as_ubyte(img_ahe))
+        picture_AHE.height = prev_height
+        picture_AHE.image = img_ahe
     
     def PlotHistogram(image, image_size=(THUMBNAIL_SIZE, THUMBNAIL_SIZE), background_color='white'):
         histogram = image.histogram()
@@ -202,8 +275,8 @@ def Start():
 
     box_Toolbar = Box(app, align="top", width="fill")
     box_Toolbar.tk.config(padx=5, pady=5)
-    button_OpenFolder = PushButton(box_Toolbar, text="Open Folder", command=OpenFolder, align="left")
-    button_BatchCompute = PushButton(box_Toolbar, text="Batch Compute", align="left")
+    button_OpenFolder = PushButton(box_Toolbar, text="Open Folder", command=On_OpenFolder, align="left")
+    button_BatchCompute = PushButton(box_Toolbar, text="Batch Compute", align="left", command=On_BatchCompute)
     combo_Compute = Combo(box_Toolbar, align="left", options=["Auto Contrast", "Histogram Equalization (HE)", "Adaptive HE"])
 
     box_Main = Box(app, border=0, width="fill", height="fill")
@@ -218,7 +291,9 @@ def Start():
     box_Colormap = Box(titleBox_Previews, width='fill')
     box_Colormap.tk.config(padx=5, pady=5)
     text_Colormap = Text(box_Colormap, "Colormap: ", align="left")
+    text_Colormap.visible = False
     combo_Colormap = Combo(box_Colormap, ['gray', 'viridis', 'plasma', 'inferno', 'magma', 'cividis'], align='left', command=On_ComboColormapChanged)
+    combo_Colormap.visible = False
 
     box_original = Box(titleBox_Previews, align="left", height="fill")
     titleBox_Original = TitleBox(box_original, "Original", align="top")
