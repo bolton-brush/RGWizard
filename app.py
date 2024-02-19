@@ -1,17 +1,15 @@
 from tkinter import filedialog, ttk
-from guizero import App, PushButton, Text, Box, ListBox, TitleBox, Picture, Slider, Combo
+from guizero import App, PushButton, Text, Box, ListBox, TitleBox, Picture, Slider, Combo, CheckBox
 from PIL import Image, ImageDraw
 from skimage import io, exposure, util, color, transform
 import numpy as np
 from matplotlib import pyplot as plt
 from pathlib import Path
-from io import BytesIO
 import logging
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 import threading
 import time
 from functools import partial
-import random as rnd
 
 
 logging.basicConfig(level=logging.INFO)
@@ -28,9 +26,15 @@ def TimeIt(func):
         return result
     return wrapper
 
-def BatchCompute(file, selectedFolder, compute, cmap, cutoff):
+def BatchCompute(file, selectedFolder, compute, cmap, cutoff, autoCrop):
     img = io.imread(file)
     original_dtype = img.dtype
+    if(original_dtype == np.uint16):
+        img = util.img_as_float64(img)
+    else:
+        img = color.rgb2gray(img)
+    if(autoCrop):
+        img = AutoCrop(img)
     path = Path(file)
     selectedFolder = Path(selectedFolder)
 
@@ -73,11 +77,28 @@ def BatchCompute(file, selectedFolder, compute, cmap, cutoff):
     
     return str(new_path)
 
+def AutoCrop(image, threshold=0.9):
+    mask = image > threshold
+    coords = np.argwhere(~mask)
+    x0, y0 = coords.min(axis=0)
+    x1, y1 = coords.max(axis=0) + 1
+    cropped = image[x0:x1, y0:y1]
+    return cropped
+
 def Start():
+    def On_CheckBox_Crop():
+        if(file := listBox_Files.value):
+            GeneratePreviews(file)
+    
+    def On_Slider_Crop():
+        if(checkBox_Crop.value):
+            if(file := listBox_Files.value):
+                # logging.info(f"crop: {slider_Crop.value}")
+                GeneratePreviews(file)
+
     def On_Slider_AC_Cutoff():
-        ac_prev = ComputeAC(original_img, combo_Colormap.value, slider_AC_Cutoff.value)
-        picture_AC.image = ac_prev
-        picture_Hist.image = PlotHistogram(picture_AC.image)
+        ComputeAC(original_img, combo_Colormap.value, slider_AC_Cutoff.value)
+        PlotHistogram(picture_AC.image)
 
     def On_MouseEnter_Preview(event_data):
         PlotHistogram(event_data.widget.image)
@@ -125,13 +146,16 @@ def Start():
                 compute = combo_Compute.value
                 cmap = combo_Colormap.value
                 cutoff = slider_AC_Cutoff.value
-                background_thread = threading.Thread(target=Run_BatchCompute, args=(selectedFolder, files, tot, compute, cmap, cutoff))
+                autoCrop = checkBox_Crop.value
+                # ct = 0.9
+                background_thread = threading.Thread(target=Run_BatchCompute, args=(selectedFolder, files, tot, compute, cmap, cutoff, autoCrop))
                 background_thread.start()
-        
-    def Run_BatchCompute(selectedFolder, files, tot, compute, cmap, cutoff):
-        partial_BatchCompute = partial(BatchCompute, selectedFolder=selectedFolder, compute=compute, cmap=cmap, cutoff=cutoff)
-        with ProcessPoolExecutor() as pex:
-            futures = [pex.submit(partial_BatchCompute, file) for file in files]
+    
+    @TimeIt
+    def Run_BatchCompute(selectedFolder, files, tot, compute, cmap, cutoff, autoCrop):
+        partial_BatchCompute = partial(BatchCompute, selectedFolder=selectedFolder, compute=compute, cmap=cmap, cutoff=cutoff, autoCrop=autoCrop)
+        with ProcessPoolExecutor() as executor:
+            futures = [executor.submit(partial_BatchCompute, file) for file in files]
             for i, f in enumerate(as_completed(futures), 1):
                 res = f.result()
                 app.after(0, Update_BatchCompute, [res, i, tot])
@@ -142,7 +166,6 @@ def Start():
         logging.info(f"{i}/{tot} - {res}")
         percent = int((i/tot)*100)
         UpdateProgBar(percent)
-
 
     @TimeIt
     def LoadImages(folder_path):
@@ -170,6 +193,8 @@ def Start():
         global original_img
         global prev_height
         img = util.img_as_float64(io.imread(image_File, as_gray=True))
+        if(checkBox_Crop.value):
+            img = AutoCrop(img)
         h, w = img.shape[:2]
         prev_height = int(THUMBNAIL_SIZE / (w / h))
         original_img = transform.resize(img, (prev_height, THUMBNAIL_SIZE), anti_aliasing=True)
@@ -240,35 +265,6 @@ def Start():
 
         picture_Hist.image = histogram_image
 
-    def PlotHistogramPlt(input_image, width_px=THUMBNAIL_SIZE, height_px=THUMBNAIL_SIZE):
-        default_dpi = plt.rcParams['figure.dpi']
-        
-        figsize_inch_width = width_px / default_dpi
-        figsize_inch_height = height_px / default_dpi
-        img_array = np.array(input_image)
-        img_array = util.img_as_float(img_array)
-        if len(img_array.shape) == 3:
-            img_array = color.rgb2gray(img_array)
-        
-        fig, ax_hist = plt.subplots(figsize=(figsize_inch_width, figsize_inch_height))
-        ax_cdf = ax_hist.twinx()
-        ax_hist.hist(img_array.ravel(), bins=256, color='blue', alpha=0.6)
-        ax_hist.ticklabel_format(axis='y', style='scientific', scilimits=(0, 0))
-        ax_hist.set_xlim(0, 1)
-        ax_hist.set_yticks([])
-        img_cdf, bins = exposure.cumulative_distribution(img_array)
-        ax_cdf.plot(bins, img_cdf, 'r')
-        ax_cdf.set_yticks([])
-        plt.tight_layout()
-
-        with BytesIO() as buf:
-            plt.savefig(buf, format='png', dpi=default_dpi)
-            buf.seek(0)
-            output_image = Image.open(buf).copy()
-        
-        plt.close(fig)
-        picture_Hist.image = output_image
-
 
     app = App(title="XRView", layout="auto", width=1600, height=900)
     app.tk.config(padx=5, pady=5)
@@ -298,8 +294,12 @@ def Start():
     box_original = Box(titleBox_Previews, align="left", height="fill")
     titleBox_Original = TitleBox(box_original, "Original", align="top")
     titleBox_Original.tk.config(padx=5, pady=5)
-    picture_Original = Picture(titleBox_Original, align="left", image=dummy_image)
+    picture_Original = Picture(titleBox_Original, align="top", image=dummy_image)
     picture_Original.name = "original"
+    box_Crop = Box(titleBox_Original, align="bottom", width="fill")
+    checkBox_Crop = CheckBox(box_Crop, text="Auto Crop", command=On_CheckBox_Crop, align="left")
+    checkBox_Crop.value = 1
+    # slider_Crop = Slider(box_Crop, 1, 99, align="left", width="fill", command=On_Slider_Crop)
     picture_Original.when_mouse_enters = On_MouseEnter_Preview
     picture_Original.when_double_clicked = On_DoubleClick_Preview
 
@@ -344,7 +344,7 @@ def Start():
     box_Status = Box(app, width="fill", layout="grid")
     box_Status.tk.config(padx=5, pady=5)
     box_Status.tk.columnconfigure(0, weight=1)
-    text_Status = Text(box_Status, "Welcome to XRView",
+    text_Status = Text(box_Status, "Welcome to RGView",
                        align="left", grid=[0, 0])
     prog_bar = ttk.Progressbar(box_Status.tk, mode="determinate", orient="horizontal")
     prog_bar.grid(row=1, column=0, sticky="ew")
@@ -353,5 +353,5 @@ def Start():
     app.display()
 
 
-if __name__ == "__main__":
+if (__name__ == "__main__"):
     Start()
