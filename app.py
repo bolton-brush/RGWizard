@@ -1,15 +1,16 @@
+import os
+import time
+import logging
+import threading
+from pathlib import Path
+from functools import partial
 from tkinter import filedialog, ttk
 from guizero import App, PushButton, Text, Box, ListBox, TitleBox, Picture, Slider, Combo, CheckBox
-from PIL import Image, ImageDraw
-from skimage import io, exposure, util, color, transform
 import numpy as np
 from matplotlib import pyplot as plt
-from pathlib import Path
-import logging
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
-import threading
-import time
-from functools import partial
+from skimage import io, exposure, util, color, transform
+from PIL import Image, ImageDraw
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 logging.basicConfig(level=logging.INFO)
@@ -154,7 +155,7 @@ def Start():
     @TimeIt
     def Run_BatchCompute(selectedFolder, files, tot, compute, cmap, cutoff, autoCrop):
         partial_BatchCompute = partial(BatchCompute, selectedFolder=selectedFolder, compute=compute, cmap=cmap, cutoff=cutoff, autoCrop=autoCrop)
-        with ProcessPoolExecutor() as executor:
+        with ThreadPoolExecutor(int(os.cpu_count()/2.5)) as executor:
             futures = [executor.submit(partial_BatchCompute, file) for file in files]
             for i, f in enumerate(as_completed(futures), 1):
                 res = f.result()
@@ -266,14 +267,14 @@ def Start():
         picture_Hist.image = histogram_image
 
 
-    app = App(title="XRView", layout="auto", width=1600, height=900)
+    app = App(title="RGView", layout="auto", width=1600, height=900)
     app.tk.config(padx=5, pady=5)
 
     box_Toolbar = Box(app, align="top", width="fill")
     box_Toolbar.tk.config(padx=5, pady=5)
     button_OpenFolder = PushButton(box_Toolbar, text="Open Folder", command=On_OpenFolder, align="left")
-    button_BatchCompute = PushButton(box_Toolbar, text="Batch Compute", align="left", command=On_BatchCompute)
     combo_Compute = Combo(box_Toolbar, align="left", options=["Auto Contrast", "Histogram Equalization (HE)", "Adaptive HE"])
+    button_BatchCompute = PushButton(box_Toolbar, text="Batch Compute", align="left", command=On_BatchCompute)
 
     box_Main = Box(app, border=0, width="fill", height="fill")
     box_Main.tk.config(padx=5, pady=5)
