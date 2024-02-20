@@ -1,4 +1,4 @@
-import os
+from multiprocessing import freeze_support
 import time
 import logging
 import threading
@@ -94,7 +94,6 @@ def Start():
     def On_Slider_Crop():
         if(checkBox_Crop.value):
             if(file := listBox_Files.value):
-                # logging.info(f"crop: {slider_Crop.value}")
                 GeneratePreviews(file)
 
     def On_Slider_AC_Cutoff():
@@ -107,7 +106,9 @@ def Start():
     def On_DoubleClick_Preview(event):
         if (listBox_Files.items):
             img = io.imread(listBox_Files.value, as_gray=True)
-            img = util.img_as_float64(img)
+            img = exposure.rescale_intensity(img, in_range='image', out_range=np.float64)
+            if(checkBox_Crop.value):
+                img = AutoCrop(img)
             name = event.widget.name
             if(name == "ac"):
                 cutoff = slider_AC_Cutoff.value
@@ -117,7 +118,7 @@ def Start():
                 img = exposure.equalize_hist(img)
             elif(name == "ahe"):
                 img = exposure.equalize_adapthist(img)
-            plt.imshow(img, cmap=combo_Colormap.value, vmin=0)
+            plt.imshow(img, cmap=combo_Colormap.value)
             plt.show()
 
     def On_ListBoxChanged(file):
@@ -155,7 +156,7 @@ def Start():
     @TimeIt
     def Run_BatchCompute(selectedFolder, files, tot, compute, cmap, cutoff, autoCrop):
         partial_BatchCompute = partial(BatchCompute, selectedFolder=selectedFolder, compute=compute, cmap=cmap, cutoff=cutoff, autoCrop=autoCrop)
-        with ThreadPoolExecutor(int(os.cpu_count()/2.5)) as executor:
+        with ThreadPoolExecutor(2) as executor:
             futures = [executor.submit(partial_BatchCompute, file) for file in files]
             for i, f in enumerate(as_completed(futures), 1):
                 res = f.result()
@@ -355,4 +356,5 @@ def Start():
 
 
 if (__name__ == "__main__"):
+    freeze_support()
     Start()
