@@ -33,7 +33,7 @@ def stop_watch(func):
         return result
     return wrapper
 
-def compute_image(file, selectedFolder, compute, cmap, cutoff, autoCrop):
+def compute_image(file, selectedFolder, compute, cmap, cutoff, autoCrop, fliprot):
     img = io.imread(file)
     original_dtype = img.dtype
     if(original_dtype == np.uint16):
@@ -42,7 +42,8 @@ def compute_image(file, selectedFolder, compute, cmap, cutoff, autoCrop):
         img = color.rgb2gray(img[:, :, :3])
     if(autoCrop):
         img = autocrop_image(img)
-    _, img = autofliprot_image(util.img_as_ubyte(img))
+    if(fliprot):
+        _, img = autofliprot_image(util.img_as_ubyte(img))
     path = Path(file)
     selectedFolder = Path(selectedFolder)
 
@@ -137,7 +138,8 @@ def main():
             img = util.img_as_float64(img)
             if(checkBox_Crop.value):
                 img = autocrop_image(img)
-            _, img = autofliprot_image(util.img_as_ubyte(img))
+            if(checkBox_Fliprot.value):
+                _, img = autofliprot_image(util.img_as_ubyte(img))
             name = event.widget.name
             if(name == "ac"):
                 cutoff = slider_AC_Cutoff.value
@@ -178,14 +180,15 @@ def main():
                 cmap = combo_Colormap.value
                 cutoff = slider_AC_Cutoff.value
                 autoCrop = checkBox_Crop.value
-                background_thread = threading.Thread(target=run_batch_compute, args=(selectedFolder, files, tot, compute, cmap, cutoff, autoCrop))
+                fliprot = checkBox_Fliprot.value
+                background_thread = threading.Thread(target=run_batch_compute, args=(selectedFolder, files, tot, compute, cmap, cutoff, autoCrop, fliprot))
                 background_thread.start()
             else:
                 logging.info(f"Target folder selection canceled")
     
     @stop_watch
-    def run_batch_compute(selectedFolder, files, tot, compute, cmap, cutoff, autoCrop):
-        partial_BatchCompute = partial(compute_image, selectedFolder=selectedFolder, compute=compute, cmap=cmap, cutoff=cutoff, autoCrop=autoCrop)
+    def run_batch_compute(selectedFolder, files, tot, compute, cmap, cutoff, autoCrop, fliprot):
+        partial_BatchCompute = partial(compute_image, selectedFolder=selectedFolder, compute=compute, cmap=cmap, cutoff=cutoff, autoCrop=autoCrop, fliprot=fliprot)
         with ThreadPoolExecutor(2) as executor:
             futures = [executor.submit(partial_BatchCompute, file) for file in files]
             for i, f in enumerate(as_completed(futures), 1):
@@ -225,24 +228,29 @@ def main():
         global original_img
         global prev_height
         img = util.img_as_float64(io.imread(image_File, as_gray=True))
-        if(checkBox_Crop.value):
-            img = autocrop_image(img)
         h, w = img.shape[:2]
         prev_height = int(THUMBNAIL_SIZE / (w / h))
         original_img = transform.resize(img, (prev_height, THUMBNAIL_SIZE), anti_aliasing=True)
-
         if(combo_Colormap.value != 'gray'):
             original_prev = plt.get_cmap(combo_Colormap.value)(original_img)[:, :, :3]
         else:
             original_prev = original_img.copy()
+
         picture_Original.height = prev_height
         original_prev = Image.fromarray(util.img_as_ubyte(original_prev))
         picture_Original.image = original_prev
 
-        fliprotted, original_img = autofliprot_image(util.img_as_ubyte(original_img))
-        if(fliprotted):
-            h, w = original_img.shape[:2]
+        if(checkBox_Crop.value):
+            img = autocrop_image(img)
+            h, w = img.shape[:2]
             prev_height = int(THUMBNAIL_SIZE / (w / h))
+            original_img = transform.resize(img, (prev_height, THUMBNAIL_SIZE), anti_aliasing=True)
+        
+        if(checkBox_Fliprot.value):
+            fliprotted, original_img = autofliprot_image(util.img_as_ubyte(original_img))
+            if(fliprotted):
+                h, w = original_img.shape[:2]
+                prev_height = int(THUMBNAIL_SIZE / (w / h))
 
         if(not slider_AC_Cutoff.enabled):
             slider_AC_Cutoff.enable()
@@ -306,11 +314,18 @@ def main():
     app = App(title="RGView", layout="auto", width=1600, height=900)
     app.tk.config(padx=5, pady=5)
 
-    box_Toolbar = Box(app, align="top", width="fill")
-    box_Toolbar.tk.config(padx=5, pady=5)
-    button_OpenFolder = PushButton(box_Toolbar, text="Open Folder", command=On_OpenFolder, align="left")
-    combo_Compute = Combo(box_Toolbar, align="left", options=["Auto Contrast", "Histogram Equalization (HE)", "Adaptive HE"])
-    button_BatchCompute = PushButton(box_Toolbar, text="Batch Compute", align="left", command=On_BatchCompute)
+    box_Toolbar_1 = Box(app, align="top", width="fill")
+    box_Toolbar_1.tk.config(padx=5, pady=5)
+    button_OpenFolder = PushButton(box_Toolbar_1, text="Open Folder", command=On_OpenFolder, align="left")
+    combo_Compute = Combo(box_Toolbar_1, align="left", options=["Adaptive HE","Histogram Equalization (HE)","Auto Contrast"])
+    button_BatchCompute = PushButton(box_Toolbar_1, text="Batch Compute", align="left", command=On_BatchCompute)
+    box_Toolbar_2 = Box(app, align="top", width="fill")
+    box_Toolbar_2.tk.config(padx=5, pady=5)
+    # box_Crop = Box(box_Toolbar_2, align="bottom", width="fill")
+    checkBox_Crop = CheckBox(box_Toolbar_2, text="Auto Crop", command=On_CheckBox_Crop, align="left")
+    checkBox_Crop.value = 1
+    checkBox_Fliprot = CheckBox(box_Toolbar_2, text="Auto Rotation/Flipping of Lateral Cephs", command=On_CheckBox_Crop, align="left")
+    checkBox_Fliprot.value = 1
 
     box_Main = Box(app, border=0, width="fill", height="fill")
     box_Main.tk.config(padx=5, pady=5)
@@ -333,9 +348,7 @@ def main():
     titleBox_Original.tk.config(padx=5, pady=5)
     picture_Original = Picture(titleBox_Original, align="top", image=dummy_image)
     picture_Original.name = "original"
-    box_Crop = Box(titleBox_Original, align="bottom", width="fill")
-    checkBox_Crop = CheckBox(box_Crop, text="Auto Crop", command=On_CheckBox_Crop, align="left")
-    checkBox_Crop.value = 1
+    
     picture_Original.when_mouse_enters = On_MouseEnter_Preview
     picture_Original.when_double_clicked = On_DoubleClick_Preview
 

@@ -1,5 +1,7 @@
 from fastai.vision.all import *
+import pathlib
 from pathlib import Path
+import os
 
 class ModelManager:
     def __init__(self, models_folder: str) -> None:
@@ -10,7 +12,13 @@ class ModelManager:
         models = []
         for file in self.models_folder.glob('*'):
             parts = str(file.name).split('_')
-            model = load_learner(file)
+            posix_backup = pathlib.PosixPath
+            try:
+                if(os.name == 'nt'):
+                    pathlib.PosixPath = pathlib.WindowsPath
+            finally:
+                    model = load_learner(file)
+                    pathlib.PosixPath = posix_backup
             priority = parts[0]
             target = parts[1]
             task = parts[2]
