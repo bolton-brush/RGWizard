@@ -39,7 +39,7 @@ def compute_image(file, selectedFolder, compute, cmap, cutoff, autoCrop):
     if(original_dtype == np.uint16):
         img = util.img_as_float64(img)
     else:
-        img = color.rgb2gray(img)
+        img = color.rgb2gray(img[:, :, :3])
     if(autoCrop):
         img = autocrop_image(img)
     _, img = autofliprot_image(util.img_as_ubyte(img))
