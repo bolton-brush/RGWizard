@@ -1,12 +1,12 @@
 # RGView
-RGView is a cross-platform graphical user interface (GUI) application developed for the viewing and analysis of radiographic images, specifically tailored for the radiographs from the Bolton Brush Legacy Growth Study Collection. This collection predominantly features radiographs collected during the 1930s, although it spans until the 1980s.  
-RGView aims to facilitate academic and research-oriented examination of radiographic imagery by employing various computational enhancement techniques. It serves as a specialized tool for researchers and academics working with this historically significant collection.  
+RGView is a cross-platform graphical user interface (GUI) application developed for the viewing and analysis of radiographic images, specifically tailored for the radiographs from the Bolton Brush Legacy Growth Study Collection. This collection predominantly features radiographs collected during the 1930s, though it extends until the 1980s.  
+The name RGView draws inspiration from the DICOM attribute "Modality," with "RG" representing Radiographic imaging (conventional film/screen), highlighting the application's focus on facilitating academic and research-oriented examination of radiographic imagery. By employing various computational enhancement techniques, RGView serves as a specialized tool for researchers and academics working with this historically significant collection.
 
 ![image](https://github.com/frenchfaso/RGV/assets/1913203/7b1cc527-364d-4852-8827-eee61a209d55)
 
 ## Overview
 
-RGView integrates a suite of image processing algorithms to support radiographic research and analysis, particularly focusing on the unique needs and challenges associated with the Bolton & Brush Collection. It allows for the direct comparison between original and computationally enhanced radiogrpahs images, aiding in the interpretation and study of radiographic data from this collection.
+RGView integrates a suite of image processing algorithms to support radiographic research and analysis, particularly focusing on the unique needs and challenges associated with the Bolton Brush Legacy Growth Study Collection. It allows for the direct comparison between original and computationally enhanced radiogrpahs images, aiding in the interpretation and study of radiographic data from this collection.
 
 ## Features
 
@@ -26,7 +26,37 @@ RGView integrates a suite of image processing algorithms to support radiographic
 ## Usage
 
 ### Installation
-RGView is provided as a standalone executable file, eliminating the need for a traditional installation process. Users can directly download the appropriate version for Linux or Windows from the GitHub Releases section of the project repository. This approach simplifies the deployment and use of RGView, making it immediately accessible for research and analysis purposes.
+RGView is provided as a standalone executable file, eliminating the need for a traditional installation process. Users can directly download the appropriate version for Linux or Windows from the GitHub Releases section of the project repository.  
+This approach simplifies the deployment and use of RGView, making it immediately accessible for research and analysis purposes.
 
-### Building from sources
-Guidelines on building bundles from sources.
+### Building from Sources
+To compile RGView from the source code, one should first obtain the repository's contents. This can be achieved by cloning the repository or downloading the ZIP file containing the source code.  
+Following this, establishing a Python 3.11 environment is necessary, which can be done using either Conda or venv, as detailed below.
+
+#### Using Conda
+To create a Python environment with Conda, execute the following command in your terminal:
+```bash
+conda create -n rgview python=3.11
+conda activate rgview
+```
+This creates a new Conda environment named rgview and activates it.
+
+#### Using Venv
+For creating a Python environment with venv, the commands are as follows:
+```bash
+python3 -m venv rgview-env
+source rgview-env/bin/activate  # On Windows, use `rgview-env\Scripts\activate`
+```
+This sequence creates and activates a new virtual environment named rgview-env.
+
+#### Installing Dependencies
+Once the environment is set up, install the required dependencies with:
+```bash
+pip install -r requirements.txt
+```
+#### Building the Executable
+Finalize the build process by generating a single-file executable bundle for your platform with PyInstaller:
+```bash
+pyinstaller RGView.spec
+```
+This command compiles the application. After this step, you should find a single executable file under the `dist` folder, ready for deployment.
