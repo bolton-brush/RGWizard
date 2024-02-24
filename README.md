@@ -24,10 +24,12 @@ RGView integrates a suite of image processing algorithms to support radiographic
   - **Auto Rotation and Flipping via AI**: Utilizes a neural network model trained specifically for Lateral Cephalometric (Lateral Ceph) radiogrpahs, automating the correction of image orientation through rotation and/or flipping. RGView is designed to be extensible with additional neural network models, and research is underway to develop models for automating other radiographic tasks such as the classification of different types of radiogrpahs, rotation/flipping for other types of radiogrpahs, and automatic segmentation of scans containing more than one radiogrpah.
 
 ## Usage
-
 ### Installation
-RGView is provided as a standalone executable file, eliminating the need for a traditional installation process. Users can directly download the appropriate version for Linux or Windows from the GitHub Releases section of the project repository.  
-This approach simplifies the deployment and use of RGView, making it immediately accessible for research and analysis purposes.
+RGView is available as a standalone executable, streamlining deployment and use without the need for a traditional installation process.  
+For Linux or Windows versions, download directly from the project's [Releases section on GitHub](https://github.com/frenchfaso/RGV/releases).
+
+Windows users might require the Microsoft Visual C++ Redistributable to ensure RGView runs properly. This essential component provides runtime support for the application. It can be downloaded from [Microsoft's official site](https://visualstudio.microsoft.com/downloads/#microsoft-visual-c-redistributable-for-visual-studio-2022).
+
 
 ### Building from Sources
 To compile RGView from the source code, one should first obtain the repository's contents. This can be achieved by cloning the repository or downloading the ZIP file containing the source code.  
