@@ -1,6 +1,7 @@
 # RGView
 RGView is a cross-platform graphical user interface (GUI) application developed for the viewing and analysis of radiographic images, specifically tailored for the radiographs from the Bolton Brush Legacy Growth Study Collection. This collection predominantly features radiographs collected during the 1930s, though it extends until the 1980s.  
-The name RGView draws inspiration from the DICOM attribute "Modality," with "RG" representing Radiographic imaging (conventional film/screen), highlighting the application's focus on facilitating academic and research-oriented examination of radiographic imagery. By employing various computational enhancement techniques, RGView serves as a specialized tool for researchers and academics working with this historically significant collection.
+The name RGView draws inspiration from the DICOM Modality (a key attribute of the DICOM standard), with "RG" representing Radiographic imaging (conventional film/screen), highlighting the application's focus on facilitating academic and research-oriented examination of radiographic scanned imagery, which could be decayed or otherwise in a poorer quality state compared to digitally acquired radiographs.  
+By employing various computational enhancement techniques, RGView serves as a specialized tool for researchers and academics working with this historically significant collection.
 
 ![image](https://github.com/frenchfaso/RGV/assets/1913203/7b1cc527-364d-4852-8827-eee61a209d55)
 
@@ -28,7 +29,7 @@ RGView integrates a suite of image processing algorithms to support radiographic
 ## Usage
 ### Installation
 RGView is available as a standalone executable, streamlining deployment and use without the need for a traditional installation process.  
-For Linux or Windows versions, download directly from the project's [Releases section on GitHub](https://github.com/frenchfaso/RGV/releases).
+For Linux, Windows and Mac versions, download directly from the project's [Releases section on GitHub](https://github.com/frenchfaso/RGV/releases).
 
 Windows users might require the Microsoft Visual C++ Redistributable to ensure RGView runs properly. This essential component provides runtime support for the application. It can be downloaded from [Microsoft's official site](https://visualstudio.microsoft.com/downloads/#microsoft-visual-c-redistributable-for-visual-studio-2022).
 
