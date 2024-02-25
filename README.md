@@ -31,7 +31,7 @@ RGView integrates a suite of image processing algorithms to support radiographic
 RGView is available as a standalone executable, streamlining deployment and use without the need for a traditional installation process.  
 For Linux, Windows and Mac versions, download directly from the project's [Releases section on GitHub](https://github.com/frenchfaso/RGV/releases).
 
-Windows users might require the Microsoft Visual C++ Redistributable to ensure RGView runs properly. This essential component provides runtime support for the application. It can be downloaded from [Microsoft's official site](https://visualstudio.microsoft.com/downloads/#microsoft-visual-c-redistributable-for-visual-studio-2022).
+Windows users might require Microsoft Visual C++ redistributable package to ensure RGView runs properly. It can be downloaded from [Microsoft's official site](https://visualstudio.microsoft.com/downloads/#microsoft-visual-c-redistributable-for-visual-studio-2022).
 
 
 ### Building from Source
