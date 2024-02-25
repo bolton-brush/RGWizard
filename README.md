@@ -34,7 +34,7 @@ For Linux, Windows and Mac versions, download directly from the project's [Relea
 Windows users might require the Microsoft Visual C++ Redistributable to ensure RGView runs properly. This essential component provides runtime support for the application. It can be downloaded from [Microsoft's official site](https://visualstudio.microsoft.com/downloads/#microsoft-visual-c-redistributable-for-visual-studio-2022).
 
 
-### Building from Sources
+### Building from Source
 To compile RGView from the source code, one should first obtain the repository's contents. This can be achieved by cloning the repository or downloading the ZIP file containing the source code.  
 Following this, establishing a Python 3.11 environment is necessary, which can be done using either Conda or venv, as detailed below.
 
