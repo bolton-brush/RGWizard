@@ -1,4 +1,5 @@
-from multiprocessing import freeze_support
+# No need for freeze_support if using threading only with pyinstaller
+# from multiprocessing import freeze_support
 import time
 import logging
 import threading
@@ -317,11 +318,16 @@ def main():
     box_Toolbar_1 = Box(app, align="top", width="fill")
     box_Toolbar_1.tk.config(padx=5, pady=5)
     button_OpenFolder = PushButton(box_Toolbar_1, text="Open Folder", command=On_OpenFolder, align="left")
-    combo_Compute = Combo(box_Toolbar_1, align="left", options=["Adaptive HE","Histogram Equalization (HE)","Auto Contrast"])
     button_BatchCompute = PushButton(box_Toolbar_1, text="Batch Compute", align="left", command=On_BatchCompute)
+    combo_Compute = Combo(box_Toolbar_1, align="left", options=["Adaptive HE","Histogram Equalization (HE)","Auto Contrast"])
     box_Toolbar_2 = Box(app, align="top", width="fill")
     box_Toolbar_2.tk.config(padx=5, pady=5)
-    # box_Crop = Box(box_Toolbar_2, align="bottom", width="fill")
+    box_Colormap = Box(box_Toolbar_2, align='left')
+    box_Colormap.tk.config(padx=5, pady=5)
+    text_Colormap = Text(box_Colormap, "Colormap: ", size=10, align="left")
+    # text_Colormap.visible = False
+    combo_Colormap = Combo(box_Colormap, ['gray', 'viridis', 'plasma', 'inferno', 'magma', 'cividis'], align='left', command=On_ComboColormapChanged)
+    # combo_Colormap.visible = False
     checkBox_Crop = CheckBox(box_Toolbar_2, text="Auto Crop", command=On_CheckBox_Crop, align="left")
     checkBox_Crop.value = 1
     checkBox_Fliprot = CheckBox(box_Toolbar_2, text="Auto Rotation/Flipping of Lateral Cephs", command=On_CheckBox_Crop, align="left")
@@ -336,12 +342,6 @@ def main():
     titleBox_Previews = TitleBox(box_Main, "Previewes", width="fill")
     titleBox_Previews.tk.config(padx=5, pady=5)
 
-    box_Colormap = Box(titleBox_Previews, width='fill')
-    box_Colormap.tk.config(padx=5, pady=5)
-    text_Colormap = Text(box_Colormap, "Colormap: ", align="left")
-    text_Colormap.visible = False
-    combo_Colormap = Combo(box_Colormap, ['gray', 'viridis', 'plasma', 'inferno', 'magma', 'cividis'], align='left', command=On_ComboColormapChanged)
-    combo_Colormap.visible = False
 
     box_original = Box(titleBox_Previews, align="left", height="fill")
     titleBox_Original = TitleBox(box_original, "Original", align="top")
@@ -402,7 +402,8 @@ def main():
 
 
 if (__name__ == "__main__"):
-    freeze_support()
+    # No need for freeze_support if using threading only with pyinstaller
+    # freeze_support()
     model_manager = ModelManager("models")
     logging.info(f"loaded {model_manager.get_loaded_models_qt()} model(s)")
     logging.info(model_manager.get_models_info())
