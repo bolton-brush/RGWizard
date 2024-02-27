@@ -21,7 +21,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='RGView',
+    name='RGWizard',
     debug=False,
     bootloader_ignore_signals=False,
     strip=True,
