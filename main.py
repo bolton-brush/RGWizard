@@ -311,7 +311,7 @@ def main():
         picture_Hist.image = histogram_image
 
 
-    app = App(title="RGView", layout="auto", width=1600, height=900)
+    app = App(title="RGWizard", layout="auto", width=1600, height=900)
     app.tk.config(padx=5, pady=5)
 
     box_Toolbar_1 = Box(app, align="top", width="fill")
@@ -393,7 +393,7 @@ def main():
     box_Status = Box(app, width="fill", layout="grid")
     box_Status.tk.config(padx=5, pady=5)
     box_Status.tk.columnconfigure(0, weight=1)
-    text_Status = Text(box_Status, "Welcome to RGView",
+    text_Status = Text(box_Status, "Welcome to RGWizard",
                        align="left", grid=[0, 0])
     prog_bar = ttk.Progressbar(box_Status.tk, mode="determinate", orient="horizontal")
     prog_bar.grid(row=1, column=0, sticky="ew")
