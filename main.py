@@ -243,8 +243,7 @@ def main():
         picture_Original.image = original_prev
 
         if(checkBox_Crop.value):
-            border = int(textBox_border.value)
-            img = autocrop_image(img, border)
+            img = autocrop_image(img)
             h, w = img.shape[:2]
             prev_height = int(THUMBNAIL_SIZE / (w / h))
             original_img = transform.resize(img, (prev_height, THUMBNAIL_SIZE), anti_aliasing=True)
