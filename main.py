@@ -1,17 +1,18 @@
-# No need for freeze_support if using threading only with pyinstaller
+# No need for freeze_support if using threading with pyinstaller
 # from multiprocessing import freeze_support
 import time
 import logging
 import threading
 from pathlib import Path
 from functools import partial
-from tkinter import filedialog, ttk
-from guizero import App, PushButton, Text, Box, ListBox, TitleBox, Picture, Slider, Combo, CheckBox
+from tkinter import filedialog, ttk, Spinbox
+from guizero import App, PushButton, Text, Box, TextBox, ListBox, TitleBox, Picture, Slider, Combo, CheckBox
 import numpy as np
 import matplotlib
 matplotlib.use('TkAgg')
 from matplotlib import pyplot as plt
 from skimage import io, exposure, util, color, transform
+from skimage.morphology import dilation, square
 from PIL import Image, ImageDraw
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from model_manager import ModelManager
@@ -37,7 +38,7 @@ def stop_watch(func):
 def compute_image(file, selectedFolder, compute, cmap, cutoff, autoCrop, fliprot):
     img = io.imread(file)
     original_dtype = img.dtype
-    if(original_dtype == np.uint16):
+    if(original_dtype == np.uint16 or len(img.shape) == 2):
         img = util.img_as_float64(img)
     else:
         img = color.rgb2gray(img[:, :, :3])
@@ -87,7 +88,7 @@ def compute_image(file, selectedFolder, compute, cmap, cutoff, autoCrop, fliprot
     
     return str(new_path)
 
-def autocrop_image(image, threshold=0.9):
+def autocrop_image(image, threshold=0.85):
     mask = image > threshold
     coords = np.argwhere(~mask)
     x0, y0 = coords.min(axis=0)
@@ -242,7 +243,8 @@ def main():
         picture_Original.image = original_prev
 
         if(checkBox_Crop.value):
-            img = autocrop_image(img)
+            border = int(textBox_border.value)
+            img = autocrop_image(img, border)
             h, w = img.shape[:2]
             prev_height = int(THUMBNAIL_SIZE / (w / h))
             original_img = transform.resize(img, (prev_height, THUMBNAIL_SIZE), anti_aliasing=True)
@@ -335,6 +337,7 @@ def main():
 
     box_Main = Box(app, border=0, width="fill", height="fill")
     box_Main.tk.config(padx=5, pady=5)
+    
 
     titleBox_Files = TitleBox(box_Main, "Image Files", width="fill", height="fill")
     titleBox_Files.tk.config(padx=5, pady=5)

@@ -3,7 +3,7 @@ RGWizard is a cross-platform graphical user interface (GUI) application develope
 The name RGWizard draws inspiration from the DICOM Modality (a key attribute of the DICOM standard), with "RG" representing Radiographic imaging (conventional film/screen), highlighting the application's focus on facilitating academic and research-oriented examination of radiographic scanned imagery, which could be decayed or otherwise in a poorer quality state compared to digitally acquired radiographs.  
 By employing various computational enhancement techniques, RGWizard serves as a specialized tool for researchers and academics working with this historically significant collection.
 
-![image](https://github.com/frenchfaso/RGW/assets/1913203/7b1cc527-364d-4852-8827-eee61a209d55)
+![image](./screenshot.png)
 
 ## Overview
 
