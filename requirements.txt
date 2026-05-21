@@ -14,7 +14,7 @@ fastai==2.7.14
 fastcore==1.5.29
 fastdownload==0.0.7
 fastprogress==1.0.3
-filelock==3.9.0
+filelock==3.20.3
 fonttools==4.49.0
 fsspec==2023.4.0
 guizero==1.5.0
