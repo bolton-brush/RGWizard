@@ -18,7 +18,7 @@ filelock==3.9.0
 fonttools==4.49.0
 fsspec==2023.4.0
 guizero==1.5.0
-idna==3.6
+idna==3.15
 imagecodecs==2024.1.1
 imageio==2.34.0
 Jinja2==3.1.2
