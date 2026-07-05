@@ -17,7 +17,7 @@ fastprogress==1.0.3
 filelock==3.20.3
 fonttools==4.60.2
 fsspec==2023.4.0
-guizero==1.5.0
+guizero==1.6.0
 idna==3.15
 imagecodecs==2024.12.30
 imageio==2.34.0

@@ -17,9 +17,6 @@ from PIL import Image, ImageDraw
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from model_manager import ModelManager
 
-if not hasattr(Image, "isImageType"):
-    Image.isImageType = lambda image: isinstance(image, Image.Image)
-
 logging.basicConfig(level=logging.INFO)
 THUMBNAIL_SIZE = 300
 dummy_image = Image.new("L", (THUMBNAIL_SIZE, THUMBNAIL_SIZE), "white")
