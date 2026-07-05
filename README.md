@@ -28,28 +28,28 @@ RGWizard integrates a suite of image processing algorithms to support radiograph
 
 ## Usage
 ### Installation
-RGWizard is available as a standalone executable, streamlining deployment and use without the need for a traditional installation process.  
-For Linux, Windows and Mac versions, download directly from the project's [Releases section on GitHub](https://github.com/frenchfaso/RGW/releases).
+RGWizard can be packaged as a standalone executable, streamlining deployment and use without the need for a traditional installation process.  
+Prebuilt bundles, when available for a release, are published in the project's [Releases section on GitHub](https://github.com/frenchfaso/RGW/releases). The current source tree can also be built locally with PyInstaller, as described below.
 
 Windows users might require Microsoft Visual C++ redistributable package to ensure RGWizard runs properly. It can be downloaded from [Microsoft's official site](https://visualstudio.microsoft.com/downloads/#microsoft-visual-c-redistributable-for-visual-studio-2022).
 
 
 ### Building from Source
 To compile RGWizard from the source code, one should first obtain the repository's contents. This can be achieved by cloning the repository or downloading the ZIP file containing the source code.  
-Following this, establishing a Python 3.11 environment is necessary, which can be done using either Conda or venv, as detailed below.
+Following this, create a Python 3.12 environment. The current dependency set has been validated with Python 3.12 and PyTorch 2.12.
 
 #### Using Conda
 To create a Python environment with Conda, execute the following command in your terminal:
 ```bash
-conda create -n RGWizard python=3.11
-conda activate RGWizard
+conda create -n rgw python=3.12 pip
+conda activate rgw
 ```
-This creates a new Conda environment named RGWizard and activates it.
+This creates a new Conda environment named rgw and activates it.
 
 #### Using Venv
 For creating a Python environment with venv, the commands are as follows:
 ```bash
-python3 -m venv RGWizard-env
+python3.12 -m venv RGWizard-env
 source RGWizard-env/bin/activate  # On Windows, use `RGWizard-env\Scripts\activate`
 ```
 This sequence creates and activates a new virtual environment named RGWizard-env.
@@ -57,11 +57,11 @@ This sequence creates and activates a new virtual environment named RGWizard-env
 #### Installing Dependencies
 Once the environment is set up, install the required dependencies with:
 ```bash
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 ```
 #### Building the Executable
-Finalize the build process by generating a single-file executable bundle for your platform with PyInstaller:
+Finalize the build process by generating a deployable bundle for your platform with PyInstaller. The `models` folder must be present; it is bundled into the executable by `RGWizard.spec`.
 ```bash
 pyinstaller RGWizard.spec
 ```
-This command compiles the application. After this step, you should find a single executable file under the `dist` folder, ready for deployment.
+This command compiles the application. After this step, you should find the generated bundle under the `dist` folder, ready for deployment. On macOS, PyInstaller also creates an app bundle. The `build` and `dist` folders are generated artifacts and can be removed and regenerated.
