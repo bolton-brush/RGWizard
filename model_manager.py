@@ -2,6 +2,22 @@ from fastai.vision.all import *
 import pathlib
 from pathlib import Path
 import os
+import sys
+import __main__
+
+from legacy_fastcore import dispatch as legacy_dispatch
+from legacy_fastcore import transform as legacy_transform
+
+
+def _label_func(f):
+    pass
+
+
+def install_legacy_fastai_model_shim():
+    sys.modules['fastcore.dispatch'] = legacy_dispatch
+    sys.modules['fastcore.transform'] = legacy_transform
+    if not hasattr(__main__, 'label_func'):
+        __main__.label_func = _label_func
 
 class ModelManager:
     def __init__(self, models_folder: str) -> None:
@@ -16,9 +32,10 @@ class ModelManager:
             try:
                 if(os.name == 'nt'):
                     pathlib.PosixPath = pathlib.WindowsPath
+                install_legacy_fastai_model_shim()
+                model = load_learner(file)
             finally:
-                    model = load_learner(file)
-                    pathlib.PosixPath = posix_backup
+                pathlib.PosixPath = posix_backup
             priority = parts[0]
             target = parts[1]
             task = parts[2]

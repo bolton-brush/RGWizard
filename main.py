@@ -96,9 +96,22 @@ def autocrop_image(image, threshold=0.85):
     cropped = image[x0:x1, y0:y1]
     return cropped
 
+def prepare_fliprot_prediction_image(image):
+    arr = np.asarray(image)
+    if arr.dtype != np.float32:
+        arr = util.img_as_float32(arr)
+    else:
+        arr = arr.astype(np.float32, copy=False)
+    if arr.ndim == 2:
+        arr = np.repeat(arr[None, :, :], 3, axis=0)
+    elif arr.ndim == 3 and arr.shape[0] != 3 and arr.shape[-1] >= 3:
+        arr = np.moveaxis(arr[..., :3], -1, 0)
+    return arr.astype(np.float32, copy=False)
+
 def autofliprot_image(image):
     fliprotted = True
-    pred_class, pred_idx, outputs = model_manager.loaded_models[0]['model'].predict(image)
+    prediction_image = prepare_fliprot_prediction_image(image)
+    pred_class, pred_idx, outputs = model_manager.loaded_models[0]['model'].predict(prediction_image)
     label = str(pred_class)
     match label:
         case "0F":
