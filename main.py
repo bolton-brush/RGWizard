@@ -5,14 +5,13 @@ import logging
 import threading
 from pathlib import Path
 from functools import partial
-from tkinter import filedialog, ttk, Spinbox
-from guizero import App, PushButton, Text, Box, TextBox, ListBox, TitleBox, Picture, Slider, Combo, CheckBox
+from tkinter import filedialog, ttk
+from guizero import App, PushButton, Text, Box, ListBox, TitleBox, Picture, Slider, Combo, CheckBox
 import numpy as np
 import matplotlib
 matplotlib.use('TkAgg')
 from matplotlib import pyplot as plt
 from skimage import io, exposure, util, color, transform
-from skimage.morphology import dilation, square
 from PIL import Image, ImageDraw
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from model_manager import ModelManager
@@ -22,8 +21,11 @@ THUMBNAIL_SIZE = 300
 dummy_image = Image.new("L", (THUMBNAIL_SIZE, THUMBNAIL_SIZE), "white")
 original_img = None
 
-def label_func(f):
-    pass
+ENHANCEMENT_OUTPUT_FOLDERS = {
+    "Auto Contrast": "AutoContrast",
+    "Histogram Equalization (HE)": "HistogramEqualization",
+    "Adaptive HE": "AdaptiveHistogramEqualization",
+}
 
 def stop_watch(func):
     def wrapper(*args, **kwargs):
@@ -34,13 +36,50 @@ def stop_watch(func):
         return result
     return wrapper
 
+def prepare_processing_image(image):
+    if(image.dtype == np.uint16 or image.ndim == 2):
+        return util.img_as_float64(image)
+    return color.rgb2gray(image[:, :, :3])
+
+def apply_enhancement(image, compute, cutoff=2):
+    if(compute == "Auto Contrast"):
+        p_lower, p_upper = np.percentile(image, (0+cutoff, 100-cutoff))
+        return exposure.rescale_intensity(image, in_range=(p_lower, p_upper))
+    if(compute == "Histogram Equalization (HE)"):
+        return exposure.equalize_hist(image)
+    if(compute == "Adaptive HE"):
+        return exposure.equalize_adapthist(image)
+    raise ValueError(f"Unknown enhancement: {compute}")
+
+def apply_colormap(image, cmap):
+    if(cmap == 'gray'):
+        return image
+    return plt.get_cmap(cmap)(image)[:, :, :3]
+
+def image_to_pil(image, cmap='gray'):
+    return Image.fromarray(util.img_as_ubyte(apply_colormap(image, cmap)))
+
+def restore_original_dtype(image, original_dtype):
+    if(original_dtype == np.uint8):
+        return util.img_as_ubyte(image)
+    if(original_dtype == np.uint16):
+        return util.img_as_uint(image)
+    return image
+
+def preview_height_for(image):
+    h, w = image.shape[:2]
+    return int(THUMBNAIL_SIZE / (w / h))
+
+def get_fliprot_model():
+    manager = globals().get('model_manager')
+    if manager is None:
+        return None
+    return manager.get_model(target="LC", task="fliprot")
+
 def compute_image(file, selectedFolder, compute, cmap, cutoff, autoCrop, fliprot):
-    img = io.imread(file)
-    original_dtype = img.dtype
-    if(original_dtype == np.uint16 or len(img.shape) == 2):
-        img = util.img_as_float64(img)
-    else:
-        img = color.rgb2gray(img[:, :, :3])
+    img_raw = io.imread(file)
+    original_dtype = img_raw.dtype
+    img = prepare_processing_image(img_raw)
     if(autoCrop):
         img = autocrop_image(img)
     if(fliprot):
@@ -48,51 +87,26 @@ def compute_image(file, selectedFolder, compute, cmap, cutoff, autoCrop, fliprot
     path = Path(file)
     selectedFolder = Path(selectedFolder)
 
-    if(compute == "Auto Contrast"):
-        p_lower, p_upper = np.percentile(img, (0+cutoff, 100-cutoff))
-        img_ac = exposure.rescale_intensity(img, in_range=(p_lower, p_upper))
-        if(cmap != 'gray'):
-            img_ac = plt.get_cmap(cmap)(img_ac)[:, :, :3]
-        new_path = selectedFolder / "AutoContrast" / path.name
-        new_path.parent.mkdir(parents=True, exist_ok=True)
-        if(original_dtype == np.uint8):
-            img_ac = util.img_as_ubyte(img_ac)
-        elif(original_dtype == np.uint16):
-            img_ac = util.img_as_uint(img_ac)
-        io.imsave(new_path, img_ac)
-
-    elif(compute == "Histogram Equalization (HE)"):
-        img_he = exposure.equalize_hist(img)
-        if(cmap != 'gray'):
-            img_he = plt.get_cmap(cmap)(img_he)[:, :, :3]
-        new_path = selectedFolder / "HistogramEqualization" / path.name
-        new_path.parent.mkdir(parents=True, exist_ok=True)
-        if(original_dtype == np.uint8):
-            img_he = util.img_as_ubyte(img_he)
-        elif(original_dtype == np.uint16):
-            img_he = util.img_as_uint(img_he)
-        io.imsave(new_path, img_he)
-    
-    elif(compute == "Adaptive HE"):
-        img_ahe = exposure.equalize_adapthist(img)
-        if(cmap != 'gray'):
-            img_ahe = plt.get_cmap(cmap)(img_ahe)[:, :, :3]
-        new_path = selectedFolder / "AdaptiveHistogramEqualization" / path.name
-        new_path.parent.mkdir(parents=True, exist_ok=True)
-        if(original_dtype == np.uint8):
-            img_ahe = util.img_as_ubyte(img_ahe)
-        elif(original_dtype == np.uint16):
-            img_ahe = util.img_as_uint(img_ahe)
-        io.imsave(new_path, img_ahe)
+    img_out = apply_enhancement(img, compute, cutoff)
+    img_out = apply_colormap(img_out, cmap)
+    img_out = restore_original_dtype(img_out, original_dtype)
+    new_path = selectedFolder / ENHANCEMENT_OUTPUT_FOLDERS[compute] / path.name
+    new_path.parent.mkdir(parents=True, exist_ok=True)
+    io.imsave(new_path, img_out)
     
     return str(new_path)
 
 def autocrop_image(image, threshold=0.85):
-    mask = image > threshold
+    if image.ndim == 3:
+        mask = np.all(image > threshold, axis=-1)
+    else:
+        mask = image > threshold
     coords = np.argwhere(~mask)
+    if coords.size == 0:
+        return image
     x0, y0 = coords.min(axis=0)
     x1, y1 = coords.max(axis=0) + 1
-    cropped = image[x0:x1, y0:y1]
+    cropped = image[x0:x1, y0:y1, ...]
     return cropped
 
 def prepare_fliprot_prediction_image(image):
@@ -108,9 +122,14 @@ def prepare_fliprot_prediction_image(image):
     return arr.astype(np.float32, copy=False)
 
 def autofliprot_image(image):
+    model = get_fliprot_model()
+    if model is None:
+        logging.warning("No LC fliprot model loaded; skipping auto rotation/flipping")
+        return (False, image)
+
     fliprotted = True
     prediction_image = prepare_fliprot_prediction_image(image)
-    pred_class, pred_idx, outputs = model_manager.loaded_models[0]['model'].predict(prediction_image)
+    pred_class, pred_idx, outputs = model['model'].predict(prediction_image)
     label = str(pred_class)
     match label:
         case "0F":
@@ -129,7 +148,10 @@ def autofliprot_image(image):
         case "270F":
             image = np.fliplr(image)
             image = transform.rotate(image, 90, resize=True)
-        case "none":
+        case "0" | "none":
+            fliprotted = False
+        case _:
+            logging.warning(f"Unexpected fliprot prediction label: {label}")
             fliprotted = False
     return (fliprotted, image)
 
@@ -156,13 +178,11 @@ def main():
                 _, img = autofliprot_image(util.img_as_ubyte(img))
             name = event.widget.name
             if(name == "ac"):
-                cutoff = slider_AC_Cutoff.value
-                p_lower, p_upper = np.percentile(img, (0+cutoff, 100-cutoff))
-                img = exposure.rescale_intensity(img, in_range=(p_lower, p_upper))
+                img = apply_enhancement(img, "Auto Contrast", slider_AC_Cutoff.value)
             elif(name == "he"):
-                img = exposure.equalize_hist(img)
+                img = apply_enhancement(img, "Histogram Equalization (HE)")
             elif(name == "ahe"):
-                img = exposure.equalize_adapthist(img)
+                img = apply_enhancement(img, "Adaptive HE")
             plt.imshow(img, cmap=combo_Colormap.value, vmin=0)
             plt.show()
 
@@ -204,13 +224,19 @@ def main():
     def run_batch_compute(selectedFolder, files, tot, compute, cmap, cutoff, autoCrop, fliprot):
         partial_BatchCompute = partial(compute_image, selectedFolder=selectedFolder, compute=compute, cmap=cmap, cutoff=cutoff, autoCrop=autoCrop, fliprot=fliprot)
         with ThreadPoolExecutor(2) as executor:
-            futures = [executor.submit(partial_BatchCompute, file) for file in files]
-            for i, f in enumerate(as_completed(futures), 1):
-                res = f.result()
-                app.after(0, update_batch_compute, [res, i, tot])
+            futures = {executor.submit(partial_BatchCompute, file): file for file in files}
+            for i, future in enumerate(as_completed(futures), 1):
+                ok = True
+                try:
+                    res = future.result()
+                except Exception as exc:
+                    ok = False
+                    res = f"{futures[future]}: {exc}"
+                    logging.exception(f"Failed to compute {futures[future]}")
+                app.after(0, update_batch_compute, [res, i, tot, ok])
     
-    def update_batch_compute(res, i, tot):
-        msg = f"{i}/{tot} computed"
+    def update_batch_compute(res, i, tot, ok=True):
+        msg = f"{i}/{tot} computed" if ok else f"{i}/{tot} failed"
         text_Status.value = msg
         logging.info(f"{i}/{tot} - {res}")
         percent = int((i/tot)*100)
@@ -242,29 +268,21 @@ def main():
         global original_img
         global prev_height
         img = util.img_as_float64(io.imread(image_File, as_gray=True))
-        h, w = img.shape[:2]
-        prev_height = int(THUMBNAIL_SIZE / (w / h))
+        prev_height = preview_height_for(img)
         original_img = transform.resize(img, (prev_height, THUMBNAIL_SIZE), anti_aliasing=True)
-        if(combo_Colormap.value != 'gray'):
-            original_prev = plt.get_cmap(combo_Colormap.value)(original_img)[:, :, :3]
-        else:
-            original_prev = original_img.copy()
 
         picture_Original.height = prev_height
-        original_prev = Image.fromarray(util.img_as_ubyte(original_prev))
-        picture_Original.image = original_prev
+        picture_Original.image = image_to_pil(original_img, combo_Colormap.value)
 
         if(checkBox_Crop.value):
             img = autocrop_image(img)
-            h, w = img.shape[:2]
-            prev_height = int(THUMBNAIL_SIZE / (w / h))
+            prev_height = preview_height_for(img)
             original_img = transform.resize(img, (prev_height, THUMBNAIL_SIZE), anti_aliasing=True)
         
         if(checkBox_Fliprot.value):
             fliprotted, original_img = autofliprot_image(util.img_as_ubyte(original_img))
             if(fliprotted):
-                h, w = original_img.shape[:2]
-                prev_height = int(THUMBNAIL_SIZE / (w / h))
+                prev_height = preview_height_for(original_img)
 
         if(not slider_AC_Cutoff.enabled):
             slider_AC_Cutoff.enable()
@@ -276,27 +294,17 @@ def main():
         app.after(4, plot_histogram, [picture_Original.image])
 
     def compute_autocontrast(image, cmap, cutoff=2):
-        p_lower, p_upper = np.percentile(image, (0+cutoff, 100-cutoff))
-        img_ac = exposure.rescale_intensity(image, in_range=(p_lower, p_upper))
-        if(cmap != 'gray'):
-            img_ac = plt.get_cmap(cmap)(img_ac)[:, :, :3]
-        img_ac = Image.fromarray(util.img_as_ubyte(img_ac))
+        img_ac = image_to_pil(apply_enhancement(image, "Auto Contrast", cutoff), cmap)
         picture_AC.height = prev_height
         picture_AC.image = img_ac
 
     def compute_histogram_equalization(image, cmap):
-        img_he = exposure.equalize_hist(image)
-        if(cmap != 'gray'):
-            img_he = plt.get_cmap(cmap)(img_he)[:, :, :3]
-        img_he = Image.fromarray(util.img_as_ubyte(img_he))
+        img_he = image_to_pil(apply_enhancement(image, "Histogram Equalization (HE)"), cmap)
         picture_HE.height = prev_height
         picture_HE.image = img_he
 
     def compute_clahe(image, cmap):
-        img_ahe = exposure.equalize_adapthist(image)
-        if(cmap != 'gray'):
-            img_ahe = plt.get_cmap(cmap)(img_ahe)[:, :, :3]
-        img_ahe = Image.fromarray(util.img_as_ubyte(img_ahe))
+        img_ahe = image_to_pil(apply_enhancement(image, "Adaptive HE"), cmap)
         picture_AHE.height = prev_height
         picture_AHE.image = img_ahe
     
@@ -344,7 +352,11 @@ def main():
     checkBox_Crop = CheckBox(box_Toolbar_2, text="Auto Crop", command=On_CheckBox_Crop, align="left")
     checkBox_Crop.value = 1
     checkBox_Fliprot = CheckBox(box_Toolbar_2, text="Auto Rotation/Flipping of Lateral Cephs", command=On_CheckBox_Crop, align="left")
-    checkBox_Fliprot.value = 1
+    if get_fliprot_model() is None:
+        checkBox_Fliprot.value = 0
+        checkBox_Fliprot.disable()
+    else:
+        checkBox_Fliprot.value = 1
 
     box_Main = Box(app, border=0, width="fill", height="fill")
     box_Main.tk.config(padx=5, pady=5)

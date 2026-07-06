@@ -22,7 +22,7 @@ RGWizard integrates a suite of image processing algorithms to support radiograph
 
 - **Automated Image Preprocessing**:
   - **Auto Crop**: Automatically identifies and removes extraneous white borders, focusing on the pertinent radiographic content.
-  - **Auto Rotation and Flipping via AI**: Utilizes a neural network model trained specifically for Lateral Cephalometric (Lateral Ceph) radiographs, automating the correction of image orientation through rotation and/or flipping. RGWizard is designed to be extensible with additional neural network models, and research is underway to develop models for automating other radiographic tasks such as the classification of different types of radiographs, rotation/flipping for other types of radiographs, and automatic segmentation of scans containing more than one radiograph.
+  - **Auto Rotation and Flipping via AI**: When a compatible model is available in the `models` folder, RGWizard uses it to correct the orientation of Lateral Cephalometric (Lateral Ceph) radiographs through rotation and/or flipping. RGWizard is designed to be extensible with additional neural network models, and research is underway to develop models for automating other radiographic tasks such as the classification of different types of radiographs, rotation/flipping for other types of radiographs, and automatic segmentation of scans containing more than one radiograph.
 
 - **Batch Enhancement Application**: Allows for the chosen enhancement technique, including automatic enhancements like auto crop and neural network model enhancements, to be applied in batch to all loaded radiographs. This feature streamlines the process of applying consistent enhancements across a collection of images, ensuring uniformity and saving significant time for researchers.
 
@@ -60,7 +60,7 @@ Once the environment is set up, install the required dependencies with:
 python -m pip install -r requirements.txt
 ```
 #### Building the Executable
-Finalize the build process by generating a deployable bundle for your platform with PyInstaller. The `models` folder must be present; it is bundled into the executable by `RGWizard.spec`.
+Finalize the build process by generating a deployable bundle for your platform with PyInstaller. If the `models` folder is present, it is bundled into the executable by `RGWizard.spec`; otherwise the app builds without AI auto-rotation/flipping.
 ```bash
 pyinstaller RGWizard.spec
 ```

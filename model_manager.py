@@ -1,9 +1,11 @@
-from fastai.vision.all import *
+import logging
 import pathlib
 from pathlib import Path
 import os
 import sys
 import __main__
+
+from fastai.vision.all import load_learner
 
 from legacy_fastcore import dispatch as legacy_dispatch
 from legacy_fastcore import transform as legacy_transform
@@ -26,8 +28,17 @@ class ModelManager:
 
     def load_models(self):
         models = []
+        if not self.models_folder.exists():
+            logging.warning(f"Models folder not found: {self.models_folder}")
+            return models
+
         for file in self.models_folder.glob('*'):
+            if not file.is_file():
+                continue
             parts = str(file.name).split('_')
+            if len(parts) < 4:
+                logging.warning(f"Skipping model with unexpected filename: {file.name}")
+                continue
             posix_backup = pathlib.PosixPath
             try:
                 if(os.name == 'nt'):
@@ -36,7 +47,11 @@ class ModelManager:
                 model = load_learner(file)
             finally:
                 pathlib.PosixPath = posix_backup
-            priority = parts[0]
+            try:
+                priority = int(parts[0])
+            except ValueError:
+                priority = sys.maxsize
+                logging.warning(f"Model {file.name} has a non-numeric priority")
             target = parts[1]
             task = parts[2]
             version = parts[3]
@@ -47,7 +62,16 @@ class ModelManager:
                 'version': version,
                 'model': model
             })
-        return models
+        return sorted(models, key=lambda m: (m['priority'], m['target'], m['task'], m['version']))
+
+    def get_model(self, target=None, task=None):
+        for model in self.loaded_models:
+            if target is not None and model['target'] != target:
+                continue
+            if task is not None and model['task'] != task:
+                continue
+            return model
+        return None
         
     def get_loaded_models_qt(self) -> int:
         return len(self.loaded_models)

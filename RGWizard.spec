@@ -1,13 +1,19 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 import sys
+from pathlib import Path
+
+
+datas = []
+if Path('./models').exists():
+    datas.append(('./models', 'models'))
 
 
 a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('./models', 'models')],
+    datas=datas,
     hiddenimports=['PIL._tkinter_finder', 'imagecodecs._shared', 'imagecodecs._imcd'],
     hookspath=[],
     hooksconfig={},
