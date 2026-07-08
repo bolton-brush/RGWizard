@@ -8,12 +8,16 @@ datas = []
 if Path('./models').exists():
     datas.append(('./models', 'models'))
 
+hiddenimports = ['PIL._tkinter_finder', 'imagecodecs._shared', 'imagecodecs._imcd']
+if sys.platform.startswith('linux') or sys.platform == 'win32':
+    hiddenimports.append('69e79323355fec38eab6__mypyc')
+
 a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
     datas=datas,
-    hiddenimports=['PIL._tkinter_finder', 'imagecodecs._shared', 'imagecodecs._imcd'],
+    hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
