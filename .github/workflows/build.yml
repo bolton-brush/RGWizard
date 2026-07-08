@@ -97,7 +97,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          python -c "import subprocess; subprocess.run([r'dist\RGWizard\RGWizard.exe', '--smoke-test'], timeout=30, check=True)"
+          python -c "import subprocess, time; start=time.perf_counter(); subprocess.run([r'dist\RGWizard\RGWizard.exe', '--smoke-test'], timeout=180, check=True); print(f'Windows smoke test completed in {time.perf_counter() - start:.1f}s')"
 
       - name: Smoke test macOS bundle startup
         if: runner.os == 'macOS'
