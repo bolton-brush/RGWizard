@@ -59,12 +59,6 @@ jobs:
         run: |
           brew install upx
 
-      - name: Install UPX on Windows
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          choco install upx -y --no-progress
-
       - name: Upgrade pip
         run: |
           python -m pip install --upgrade pip
@@ -97,13 +91,18 @@ jobs:
       - name: Smoke test Linux bundle startup
         if: runner.os == 'Linux'
         run: |
-          set +e
-          xvfb-run -a timeout 20s dist/RGWizard/RGWizard
-          status=$?
-          set -e
-          if [ "$status" -ne 0 ] && [ "$status" -ne 124 ]; then
-            exit "$status"
-          fi
+          xvfb-run -a python -c "import subprocess; subprocess.run(['dist/RGWizard/RGWizard', '--smoke-test'], timeout=30, check=True)"
+
+      - name: Smoke test Windows bundle startup
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          python -c "import subprocess; subprocess.run([r'dist\RGWizard\RGWizard.exe', '--smoke-test'], timeout=30, check=True)"
+
+      - name: Smoke test macOS bundle startup
+        if: runner.os == 'macOS'
+        run: |
+          python -c "import subprocess; subprocess.run(['dist/RGWizard.app/Contents/MacOS/RGWizard', '--smoke-test'], timeout=30, check=True)"
 
       - name: Package macOS app
         if: runner.os == 'macOS'

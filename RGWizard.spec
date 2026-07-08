@@ -4,6 +4,9 @@ import sys
 from pathlib import Path
 
 
+is_windows = sys.platform == 'win32'
+optimize_binaries = not is_windows
+
 datas = []
 if Path('./models').exists():
     datas.append(('./models', 'models'))
@@ -34,8 +37,8 @@ exe = EXE(
     name='RGWizard',
     debug=False,
     bootloader_ignore_signals=False,
-    strip=True,
-    upx=True,
+    strip=optimize_binaries,
+    upx=optimize_binaries,
     upx_exclude=[],
     runtime_tmpdir=None,
     console=False,
@@ -50,8 +53,8 @@ coll = COLLECT(
     exe,
     a.binaries,
     a.datas,
-    strip=True,
-    upx=True,
+    strip=optimize_binaries,
+    upx=optimize_binaries,
     upx_exclude=[],
     name='RGWizard',
 )

@@ -1,5 +1,6 @@
 # No need for freeze_support if using threading with pyinstaller
 # from multiprocessing import freeze_support
+import sys
 import time
 import logging
 import threading
@@ -430,8 +431,17 @@ def main():
 if (__name__ == "__main__"):
     # No need for freeze_support if using threading only with pyinstaller
     # freeze_support()
-    model_manager = ModelManager("models")
-    logging.info(f"loaded {model_manager.get_loaded_models_qt()} model(s)")
-    logging.info(model_manager.get_models_info())
-    main()
+    smoke_test = "--smoke-test" in sys.argv
+    try:
+        model_manager = ModelManager("models")
+        logging.info(f"loaded {model_manager.get_loaded_models_qt()} model(s)")
+        logging.info(model_manager.get_models_info())
+        if smoke_test and get_fliprot_model() is None:
+            raise RuntimeError("LC fliprot model was not bundled")
+        if smoke_test:
+            sys.exit(0)
+        main()
+    except Exception:
+        logging.exception("RGWizard startup failed")
+        raise
         
