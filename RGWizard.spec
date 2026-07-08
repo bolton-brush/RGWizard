@@ -8,6 +8,7 @@ datas = []
 if Path('./models').exists():
     datas.append(('./models', 'models'))
 
+strip_binaries = sys.platform.startswith('linux')
 
 a = Analysis(
     ['main.py'],
@@ -31,7 +32,7 @@ exe = EXE(
     name='RGWizard',
     debug=False,
     bootloader_ignore_signals=False,
-    strip=False,
+    strip=strip_binaries,
     upx=False,
     upx_exclude=[],
     runtime_tmpdir=None,
@@ -47,7 +48,7 @@ coll = COLLECT(
     exe,
     a.binaries,
     a.datas,
-    strip=False,
+    strip=strip_binaries,
     upx=False,
     upx_exclude=[],
     name='RGWizard',
