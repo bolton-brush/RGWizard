@@ -51,7 +51,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgl1 libglib2.0-0 tk
+          sudo apt-get install -y libgl1 libglib2.0-0 tk xvfb xauth
           sudo apt-get install -y upx-ucl || sudo apt-get install -y upx
 
       - name: Install UPX on macOS
@@ -82,6 +82,7 @@ jobs:
         run: |
           git lfs fsck
           python -m py_compile main.py model_manager.py legacy_fastcore/__init__.py legacy_fastcore/dispatch.py legacy_fastcore/transform.py
+          python -c "import pkg_resources.extern"
           python -c "from model_manager import ModelManager; m = ModelManager('models'); assert m.get_model(target='LC', task='fliprot') is not None"
 
       - name: Verify Linux build does not include CUDA wheels
@@ -92,6 +93,17 @@ jobs:
       - name: Build with PyInstaller
         run: |
           pyinstaller --clean --noconfirm RGWizard.spec
+
+      - name: Smoke test Linux bundle startup
+        if: runner.os == 'Linux'
+        run: |
+          set +e
+          xvfb-run -a timeout 20s dist/RGWizard/RGWizard
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ] && [ "$status" -ne 124 ]; then
+            exit "$status"
+          fi
 
       - name: Package macOS app
         if: runner.os == 'macOS'
