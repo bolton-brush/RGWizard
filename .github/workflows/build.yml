@@ -82,7 +82,7 @@ jobs:
         run: |
           git lfs fsck
           python -m py_compile main.py model_manager.py legacy_fastcore/__init__.py legacy_fastcore/dispatch.py legacy_fastcore/transform.py
-          python -c "import pkg_resources.extern"
+          python -c "import setuptools; from packaging.version import Version; assert Version(setuptools.__version__) >= Version('78.1.1'), setuptools.__version__"
           python -c "from model_manager import ModelManager; m = ModelManager('models'); assert m.get_model(target='LC', task='fliprot') is not None"
 
       - name: Verify Linux build does not include CUDA wheels
