@@ -32,8 +32,8 @@ jobs:
             artifact_name: RGWizard-linux-x64
           - os: windows-2025
             artifact_name: RGWizard-windows-x64
-          - os: macos-15-intel
-            artifact_name: RGWizard-macos-x64
+          - os: macos-15
+            artifact_name: RGWizard-macos-arm64
 
     steps:
       - name: Checkout repository
