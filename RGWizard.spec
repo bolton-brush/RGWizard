@@ -26,14 +26,13 @@ pyz = PYZ(a.pure)
 exe = EXE(
     pyz,
     a.scripts,
-    a.binaries,
-    a.datas,
     [],
+    exclude_binaries=True,
     name='RGWizard',
     debug=False,
     bootloader_ignore_signals=False,
-    strip=True,
-    upx=True,
+    strip=False,
+    upx=False,
     upx_exclude=[],
     runtime_tmpdir=None,
     console=False,
@@ -44,9 +43,19 @@ exe = EXE(
     entitlements_file=None,
 )
 
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.datas,
+    strip=False,
+    upx=False,
+    upx_exclude=[],
+    name='RGWizard',
+)
+
 if sys.platform == 'darwin':
     app = BUNDLE(
-        exe,
+        coll,
         name='RGWizard.app',
         bundle_identifier='org.frenchfaso.rgwizard',
         info_plist={

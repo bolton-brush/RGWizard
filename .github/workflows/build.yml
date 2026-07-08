@@ -1,0 +1,95 @@
+name: Build desktop apps
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+    paths:
+      - '.github/workflows/build.yml'
+      - 'RGWizard.spec'
+      - 'main.py'
+      - 'model_manager.py'
+      - 'legacy_fastcore/**'
+      - 'models/**'
+      - 'requirements.txt'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build ${{ matrix.artifact_name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            artifact_name: RGWizard-linux-x64
+          - os: windows-2025
+            artifact_name: RGWizard-windows-x64
+          - os: macos-15-intel
+            artifact_name: RGWizard-macos-x64
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          lfs: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install Linux runtime libraries
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1 libglib2.0-0 tk
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --no-cache-dir -r requirements.txt
+
+      - name: Verify LFS model and imports
+        run: |
+          git lfs fsck
+          python -m py_compile main.py model_manager.py legacy_fastcore/__init__.py legacy_fastcore/dispatch.py legacy_fastcore/transform.py
+          python -c "from model_manager import ModelManager; m = ModelManager('models'); assert m.get_model(target='LC', task='fliprot') is not None"
+
+      - name: Build with PyInstaller
+        run: |
+          pyinstaller --clean --noconfirm RGWizard.spec
+
+      - name: Package macOS app
+        if: runner.os == 'macOS'
+        run: |
+          mkdir -p artifacts
+          ditto -c -k --sequesterRsrc --keepParent dist/RGWizard.app artifacts/${{ matrix.artifact_name }}.zip
+
+      - name: Package Linux app
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p artifacts
+          tar -czf artifacts/${{ matrix.artifact_name }}.tar.gz -C dist RGWizard
+
+      - name: Package Windows app
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifacts
+          Compress-Archive -Path dist/RGWizard -DestinationPath artifacts/${{ matrix.artifact_name }}.zip
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: artifacts/*
+          if-no-files-found: error
+          retention-days: 14
