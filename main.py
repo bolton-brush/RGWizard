@@ -16,6 +16,7 @@ from skimage import io, exposure, util, color, transform
 from PIL import Image, ImageDraw
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from model_manager import ModelManager
+from orientation import apply_fliprot_label, prepare_fliprot_prediction_image
 
 logging.basicConfig(level=logging.INFO)
 THUMBNAIL_SIZE = 300
@@ -75,7 +76,7 @@ def get_fliprot_model():
     manager = globals().get('model_manager')
     if manager is None:
         return None
-    return manager.get_model(target="LC", task="fliprot")
+    return manager.get_model(target="CEPH", task="fliprot")
 
 def compute_image(file, selectedFolder, compute, cmap, cutoff, autoCrop, fliprot):
     img_raw = io.imread(file)
@@ -110,51 +111,20 @@ def autocrop_image(image, threshold=0.85):
     cropped = image[x0:x1, y0:y1, ...]
     return cropped
 
-def prepare_fliprot_prediction_image(image):
-    arr = np.asarray(image)
-    if arr.dtype != np.float32:
-        arr = util.img_as_float32(arr)
-    else:
-        arr = arr.astype(np.float32, copy=False)
-    if arr.ndim == 2:
-        arr = np.repeat(arr[None, :, :], 3, axis=0)
-    elif arr.ndim == 3 and arr.shape[0] != 3 and arr.shape[-1] >= 3:
-        arr = np.moveaxis(arr[..., :3], -1, 0)
-    return arr.astype(np.float32, copy=False)
-
 def autofliprot_image(image):
     model = get_fliprot_model()
     if model is None:
-        logging.warning("No LC fliprot model loaded; skipping auto rotation/flipping")
+        logging.warning("No cephalometric fliprot model loaded; skipping auto rotation/flipping")
         return (False, image)
 
-    fliprotted = True
     prediction_image = prepare_fliprot_prediction_image(image)
-    pred_class, pred_idx, outputs = model['model'].predict(prediction_image)
+    pred_class, _, _ = model['model'].predict(prediction_image)
     label = str(pred_class)
-    match label:
-        case "0F":
-            image = np.fliplr(image)
-        case "90":
-            image = transform.rotate(image, 270, resize=True)
-        case "270":
-            image = transform.rotate(image, 90, resize=True)
-        case "180":
-            image = transform.rotate(image, 180, resize=True)
-        case "90F":
-            image = np.fliplr(image)
-            image = transform.rotate(image, 270, resize=True)
-        case "180F":
-            image = np.flipud(image)
-        case "270F":
-            image = np.fliplr(image)
-            image = transform.rotate(image, 90, resize=True)
-        case "0" | "none":
-            fliprotted = False
-        case _:
-            logging.warning(f"Unexpected fliprot prediction label: {label}")
-            fliprotted = False
-    return (fliprotted, image)
+    try:
+        return apply_fliprot_label(image, label)
+    except ValueError:
+        logging.warning("Unexpected fliprot prediction label: %s", label)
+        return (False, image)
 
 def main():
     
@@ -352,7 +322,7 @@ def main():
     # combo_Colormap.visible = False
     checkBox_Crop = CheckBox(box_Toolbar_2, text="Auto Crop", command=On_CheckBox_Crop, align="left")
     checkBox_Crop.value = 1
-    checkBox_Fliprot = CheckBox(box_Toolbar_2, text="Auto Rotation/Flipping of Lateral Cephs", command=On_CheckBox_Crop, align="left")
+    checkBox_Fliprot = CheckBox(box_Toolbar_2, text="Auto Rotation/Flipping of Cephs", command=On_CheckBox_Crop, align="left")
     if get_fliprot_model() is None:
         checkBox_Fliprot.value = 0
         checkBox_Fliprot.disable()
@@ -437,7 +407,7 @@ if (__name__ == "__main__"):
         logging.info(f"loaded {model_manager.get_loaded_models_qt()} model(s)")
         logging.info(model_manager.get_models_info())
         if smoke_test and get_fliprot_model() is None:
-            raise RuntimeError("LC fliprot model was not bundled")
+            raise RuntimeError("Cephalometric fliprot model was not bundled")
         if smoke_test:
             sys.exit(0)
         main()

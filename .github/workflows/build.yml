@@ -12,9 +12,10 @@ on:
       - 'RGWizard.spec'
       - 'main.py'
       - 'model_manager.py'
-      - 'legacy_fastcore/**'
+      - 'orientation.py'
       - 'models/**'
       - 'requirements.txt'
+      - 'tests/**'
 
 permissions:
   actions: read
@@ -66,18 +67,32 @@ jobs:
       - name: Install CPU-only PyTorch on Linux
         if: runner.os == 'Linux'
         run: |
-          python -m pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch==2.12.1 torchvision==0.27.1
+          python -m pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch==2.13.0 torchvision==0.28.0
 
       - name: Install Python dependencies
         run: |
           python -m pip install --no-cache-dir -r requirements.txt
 
+      - name: Build compiled Plum on macOS ARM
+        if: runner.os == 'macOS' && runner.arch == 'ARM64'
+        env:
+          CC: /usr/bin/clang
+          CXX: /usr/bin/clang++
+          HATCH_BUILD_HOOKS_ENABLE: '1'
+        run: |
+          python -m pip install --force-reinstall --no-deps --no-binary=plum-dispatch plum-dispatch==2.9.0
+
       - name: Verify LFS model and imports
         run: |
           git lfs fsck
-          python -m py_compile main.py model_manager.py legacy_fastcore/__init__.py legacy_fastcore/dispatch.py legacy_fastcore/transform.py
+          python -m py_compile main.py model_manager.py orientation.py
           python -c "import setuptools; from packaging.version import Version; assert Version(setuptools.__version__) >= Version('78.1.1'), setuptools.__version__"
-          python -c "from model_manager import ModelManager; m = ModelManager('models'); assert m.get_model(target='LC', task='fliprot') is not None"
+          python -c "from importlib.machinery import ExtensionFileLoader; import plum._resolver as resolver; assert isinstance(resolver.__spec__.loader, ExtensionFileLoader), resolver.__spec__"
+          python -c "from model_manager import ModelManager; m = ModelManager('models'); assert m.get_model(target='CEPH', task='fliprot') is not None"
+
+      - name: Test orientation model integration
+        run: |
+          python -m unittest discover -s tests -v
 
       - name: Verify Linux build does not include CUDA wheels
         if: runner.os == 'Linux'

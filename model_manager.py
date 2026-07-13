@@ -1,25 +1,10 @@
 import logging
-import pathlib
-from pathlib import Path
 import os
+import pathlib
 import sys
-import __main__
+from pathlib import Path
 
 from fastai.vision.all import load_learner
-
-from legacy_fastcore import dispatch as legacy_dispatch
-from legacy_fastcore import transform as legacy_transform
-
-
-def _label_func(f):
-    pass
-
-
-def install_legacy_fastai_model_shim():
-    sys.modules['fastcore.dispatch'] = legacy_dispatch
-    sys.modules['fastcore.transform'] = legacy_transform
-    if not hasattr(__main__, 'label_func'):
-        __main__.label_func = _label_func
 
 class ModelManager:
     def __init__(self, models_folder: str) -> None:
@@ -35,7 +20,7 @@ class ModelManager:
         for file in self.models_folder.glob('*'):
             if not file.is_file():
                 continue
-            parts = str(file.name).split('_')
+            parts = file.stem.split('_')
             if len(parts) < 4:
                 logging.warning(f"Skipping model with unexpected filename: {file.name}")
                 continue
@@ -43,8 +28,7 @@ class ModelManager:
             try:
                 if(os.name == 'nt'):
                     pathlib.PosixPath = pathlib.WindowsPath
-                install_legacy_fastai_model_shim()
-                model = load_learner(file)
+                model = load_learner(file, cpu=True)
             finally:
                 pathlib.PosixPath = posix_backup
             try:
