@@ -29,7 +29,7 @@ RGWizard integrates a suite of image processing algorithms to support radiograph
 ## Usage
 ### Installation
 RGWizard can be packaged as a standalone executable, streamlining deployment and use without the need for a traditional installation process.  
-Prebuilt bundles, when available for a release, are published in the project's [Releases section on GitHub](https://github.com/open-ortho/RGW/releases). The current source tree can also be built locally with PyInstaller, as described below.
+Prebuilt bundles, when available for a release, are published in the project's [Releases section on GitHub](https://github.com/bolton-brush/RGWizard/releases). The current source tree can also be built locally with PyInstaller, as described below.
 
 Windows users might require Microsoft Visual C++ redistributable package to ensure RGWizard runs properly. It can be downloaded from [Microsoft's official site](https://visualstudio.microsoft.com/downloads/#microsoft-visual-c-redistributable-for-visual-studio-2022).
 
