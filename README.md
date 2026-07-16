@@ -1,14 +1,18 @@
 # RGWizard
-RGWizard is a cross-platform graphical user interface (GUI) application developed for the viewing and analysis of radiographic images, specifically tailored for the radiographs from the Bolton Brush Legacy Growth Study Collection. This collection predominantly features radiographs collected during the 1930s, though it extends until the 1980s.  
+
+RGWizard is a cross-platform graphical user interface (GUI) application developed for the viewing and analysis of radiographic images, specifically tailored for the radiographs from the Bolton Brush Legacy Growth Study Collection. This collection predominantly features radiographs collected during the 1930s, though it extends until the 1980s.
+
 RGWizard was developed by the Bolton Brush Growth Study Center at Case Western Reserve University.
-The name RGWizard draws inspiration from the DICOM Modality (a key attribute of the DICOM standard), with "RG" representing Radiographic imaging (conventional film/screen), highlighting the application's focus on facilitating academic and research-oriented examination of radiographic scanned imagery, which could be decayed or otherwise in a poorer quality state compared to digitally acquired radiographs.  
+
+The name RGWizard draws inspiration from the DICOM Modality (a key attribute of the DICOM standard), with "RG" representing Radiographic imaging (conventional film/screen), highlighting the application's focus on facilitating academic and research-oriented examination of radiographic scanned imagery, which could be decayed or otherwise in a poorer quality state compared to digitally acquired radiographs.
+
 By employing various computational enhancement techniques, RGWizard serves as a specialized tool for researchers and academics working with this historically significant collection.
 
 ![image](./screenshot.png)
 
 ## Overview
 
-RGWizard integrates a suite of image processing algorithms to support radiographic research and analysis, particularly focusing on the unique needs and challenges associated with the Bolton Brush Legacy Growth Study Collection. It allows for the direct comparison between original and computationally enhanced radiographs images, aiding in the interpretation and study of radiographic data from this collection.
+RGWizard integrates a suite of image processing algorithms to support radiographic research and analysis, particularly focusing on the unique needs and challenges associated with the Bolton Brush Legacy Growth Study Collection. It allows for the direct comparison between original and computationally enhanced radiograph images, aiding in the interpretation and study of radiographic data from this collection.
 
 ## Features
 
@@ -25,19 +29,18 @@ RGWizard integrates a suite of image processing algorithms to support radiograph
   - **Auto Crop**: Automatically identifies and removes extraneous white borders, focusing on the pertinent radiographic content.
   - **Auto Rotation and Flipping via AI**: The bundled FastAI model detects frontal and lateral cephalometric radiographs and corrects their orientation through rotation and/or flipping. Its output vocabulary covers the `frontal_<angle>[F]` and `lateral_<angle>[F]` classes for 0, 90, 180, and 270 degrees, plus `none` for images that should not be changed.
 
-- **Batch Enhancement Application**: Allows for the chosen enhancement technique, including automatic enhancements like auto crop and neural network model enhancements, to be applied in batch to all loaded radiographs. This feature streamlines the process of applying consistent enhancements across a collection of images, ensuring uniformity and saving significant time for researchers.
+- **Batch Enhancement Application**: Allows for the chosen enhancement technique, including automatic enhancements like auto crop and AI orientation correction, to be applied in batch to all loaded radiographs. This feature streamlines the process of applying consistent enhancements across a collection of images, ensuring uniformity and saving significant time for researchers.
 
 ## Usage
 ### Installation
-RGWizard can be packaged as a standalone executable, streamlining deployment and use without the need for a traditional installation process.  
-Prebuilt bundles, when available for a release, are published in the project's [Releases section on GitHub](https://github.com/bolton-brush/RGWizard/releases). The current source tree can also be built locally with PyInstaller, as described below.
+RGWizard is distributed as a self-contained PyInstaller bundle, so it does not require a traditional installation process.
+Prebuilt bundles for Windows x64, macOS Apple Silicon, and Linux x64 are published in the project's [Releases section on GitHub](https://github.com/bolton-brush/RGWizard/releases). Windows and Linux releases use PyInstaller's `onedir` layout, so the complete extracted folder must be kept intact.
 
-Windows users might require Microsoft Visual C++ redistributable package to ensure RGWizard runs properly. It can be downloaded from [Microsoft's official site](https://visualstudio.microsoft.com/downloads/#microsoft-visual-c-redistributable-for-visual-studio-2022).
-
+Windows users might require the Microsoft Visual C++ Redistributable package to ensure RGWizard runs properly. It can be downloaded from [Microsoft's official site](https://visualstudio.microsoft.com/downloads/#microsoft-visual-c-redistributable-for-visual-studio-2022).
 
 ### Building from Source
-To compile RGWizard from the source code, one should first obtain the repository's contents. This can be achieved by cloning the repository or downloading the ZIP file containing the source code.  
-Following this, create a Python 3.12 environment. The current dependency set has been validated with Python 3.12, PyTorch 2.13, FastAI 2.8.7, and timm 1.0.28.
+Clone the repository or download its source code. The model is tracked with Git LFS, so cloned checkouts require Git LFS and `git lfs pull`.
+Create a Python 3.12 environment. The current dependency set has been validated with Python 3.12, PyTorch 2.13, FastAI 2.8.7, and timm 1.0.28.
 
 #### Using Conda
 To create a Python environment with Conda, execute the following command in your terminal:
@@ -70,8 +73,8 @@ CC=/usr/bin/clang CXX=/usr/bin/clang++ HATCH_BUILD_HOOKS_ENABLE=1 \
 ```
 
 #### Building the Executable
-Finalize the build process by generating a deployable bundle for your platform with PyInstaller. If the `models` folder is present, it is bundled into the executable by `RGWizard.spec`; otherwise the app builds without AI auto-rotation/flipping.
+Generate a deployable bundle for the current platform with PyInstaller. If the `models` folder is present, it is included by `RGWizard.spec`; otherwise the app builds without AI auto-rotation/flipping.
 ```bash
 pyinstaller --clean --noconfirm RGWizard.spec
 ```
-This command compiles the application. After this step, you should find the generated bundle under the `dist` folder, ready for deployment. On macOS, PyInstaller also creates an app bundle. The `build` and `dist` folders are generated artifacts and can be removed and regenerated.
+The generated bundle is placed under `dist`. On macOS, PyInstaller also creates `RGWizard.app`. The `build` and `dist` folders are generated artifacts and can be removed and regenerated.

@@ -1,5 +1,5 @@
 APP_NAME = "RGWizard"
-APP_VERSION = "1.2.1"
+APP_VERSION = "1.2.2"
 
 DEVELOPER_NAME = "Bolton Brush Growth Study Center"
 INSTITUTION_NAME = "Case Western Reserve University"
