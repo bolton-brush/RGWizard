@@ -10,6 +10,7 @@ on:
     paths:
       - '.github/workflows/build.yml'
       - 'RGWizard.spec'
+      - 'app_metadata.py'
       - 'main.py'
       - 'model_manager.py'
       - 'orientation.py'
@@ -48,6 +49,13 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Verify release version
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          python -c "import os; from app_metadata import APP_VERSION; expected = f'v{APP_VERSION}'; actual = os.environ['RELEASE_TAG']; assert actual == expected, f'Release tag {actual} does not match app version {expected}'"
+
       - name: Install Linux runtime libraries
         if: runner.os == 'Linux'
         run: |
@@ -85,7 +93,7 @@ jobs:
       - name: Verify LFS model and imports
         run: |
           git lfs fsck
-          python -m py_compile main.py model_manager.py orientation.py
+          python -m py_compile app_metadata.py main.py model_manager.py orientation.py
           python -c "import setuptools; from packaging.version import Version; assert Version(setuptools.__version__) >= Version('78.1.1'), setuptools.__version__"
           python -c "from importlib.machinery import ExtensionFileLoader; import plum._resolver as resolver; assert isinstance(resolver.__spec__.loader, ExtensionFileLoader), resolver.__spec__"
           python -c "from model_manager import ModelManager; m = ModelManager('models'); assert m.get_model(target='CEPH', task='fliprot') is not None"

@@ -1,7 +1,13 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 import sys
+import runpy
 from pathlib import Path
+
+
+metadata = runpy.run_path(Path(SPECPATH) / 'app_metadata.py')
+APP_NAME = metadata['APP_NAME']
+APP_VERSION = metadata['APP_VERSION']
 
 
 is_windows = sys.platform == 'win32'
@@ -38,7 +44,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='RGWizard',
+    name=APP_NAME,
     debug=False,
     bootloader_ignore_signals=False,
     strip=optimize_binaries,
@@ -60,17 +66,19 @@ coll = COLLECT(
     strip=optimize_binaries,
     upx=optimize_binaries,
     upx_exclude=[],
-    name='RGWizard',
+    name=APP_NAME,
 )
 
 if sys.platform == 'darwin':
     app = BUNDLE(
         coll,
-        name='RGWizard.app',
+        name=f'{APP_NAME}.app',
         bundle_identifier='org.frenchfaso.rgwizard',
         info_plist={
-            'CFBundleName': 'RGWizard',
-            'CFBundleDisplayName': 'RGWizard',
+            'CFBundleName': APP_NAME,
+            'CFBundleDisplayName': APP_NAME,
+            'CFBundleShortVersionString': APP_VERSION,
+            'CFBundleVersion': APP_VERSION,
             'NSHighResolutionCapable': True,
         },
     )

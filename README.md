@@ -1,5 +1,6 @@
 # RGWizard
 RGWizard is a cross-platform graphical user interface (GUI) application developed for the viewing and analysis of radiographic images, specifically tailored for the radiographs from the Bolton Brush Legacy Growth Study Collection. This collection predominantly features radiographs collected during the 1930s, though it extends until the 1980s.  
+RGWizard was developed by the Bolton Brush Growth Study Center at Case Western Reserve University.
 The name RGWizard draws inspiration from the DICOM Modality (a key attribute of the DICOM standard), with "RG" representing Radiographic imaging (conventional film/screen), highlighting the application's focus on facilitating academic and research-oriented examination of radiographic scanned imagery, which could be decayed or otherwise in a poorer quality state compared to digitally acquired radiographs.  
 By employing various computational enhancement techniques, RGWizard serves as a specialized tool for researchers and academics working with this historically significant collection.
 

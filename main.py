@@ -7,7 +7,7 @@ import threading
 from pathlib import Path
 from functools import partial
 from tkinter import filedialog, ttk
-from guizero import App, PushButton, Text, Box, ListBox, TitleBox, Picture, Slider, Combo, CheckBox
+from guizero import App, PushButton, Text, Box, ListBox, TitleBox, Picture, Slider, Combo, CheckBox, MenuBar
 import numpy as np
 import matplotlib
 matplotlib.use('TkAgg')
@@ -15,6 +15,7 @@ from matplotlib import pyplot as plt
 from skimage import io, exposure, util, color, transform
 from PIL import Image, ImageDraw
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from app_metadata import ABOUT_TEXT, ABOUT_TITLE, APP_NAME, DEVELOPER_ATTRIBUTION
 from model_manager import ModelManager
 from orientation import apply_fliprot_label, prepare_fliprot_prediction_image
 
@@ -28,6 +29,22 @@ ENHANCEMENT_OUTPUT_FOLDERS = {
     "Histogram Equalization (HE)": "HistogramEqualization",
     "Adaptive HE": "AdaptiveHistogramEqualization",
 }
+
+
+def show_about(app):
+    app.info(ABOUT_TITLE, ABOUT_TEXT)
+
+
+def configure_about_menu(app, platform=sys.platform):
+    callback = partial(show_about, app)
+    if platform == "darwin":
+        app.tk.createcommand("tk::mac::ShowAbout", callback)
+        return None
+    return MenuBar(
+        app,
+        toplevel=["Help"],
+        options=[[[f"About {APP_NAME}", callback]]],
+    )
 
 def stop_watch(func):
     def wrapper(*args, **kwargs):
@@ -304,8 +321,9 @@ def main():
         picture_Hist.image = histogram_image
 
 
-    app = App(title="RGWizard", layout="auto", width=1600, height=900)
+    app = App(title=APP_NAME, layout="auto", width=1600, height=900)
     app.tk.config(padx=5, pady=5)
+    _about_menu = configure_about_menu(app)
 
     box_Toolbar_1 = Box(app, align="top", width="fill")
     box_Toolbar_1.tk.config(padx=5, pady=5)
@@ -390,10 +408,12 @@ def main():
     box_Status = Box(app, width="fill", layout="grid")
     box_Status.tk.config(padx=5, pady=5)
     box_Status.tk.columnconfigure(0, weight=1)
-    text_Status = Text(box_Status, "Welcome to RGWizard",
+    text_Status = Text(box_Status, f"Welcome to {APP_NAME}",
                        align="left", grid=[0, 0])
+    text_Attribution = Text(box_Status, DEVELOPER_ATTRIBUTION,
+                            size=9, align="left", grid=[0, 1])
     prog_bar = ttk.Progressbar(box_Status.tk, mode="determinate", orient="horizontal")
-    prog_bar.grid(row=1, column=0, sticky="ew")
+    prog_bar.grid(row=2, column=0, sticky="ew")
 
     app.display()
 
